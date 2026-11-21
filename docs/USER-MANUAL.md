@@ -83,6 +83,10 @@ Extra Small, Small, Medium (default), Large, or Extra Large. Your choice persist
 restarts. Larger sizes make individual frames easier to judge at a glance; smaller sizes let you
 see more candidates at once without scrolling.
 
+A small **scissors icon** sits next to the progress bar at all times and snips back and forth
+whenever anything is running (detection, export, verification) — a quick visual confirmation the
+app is still working and hasn't frozen, separate from the progress bar's own percentage.
+
 ## 6. Exporting
 
 1. Pick an export mode:
