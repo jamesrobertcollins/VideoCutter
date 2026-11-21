@@ -8,7 +8,12 @@ file groups changes by *topic* across commits for human readability, not 1:1 by 
 
 ## Unreleased / in progress
 
-- Nothing currently in flight.
+- **Resizable video preview**: the preview area is no longer a fixed 260px height — it fills
+  most of the available vertical space by default and can be dragged larger/smaller via a
+  handle between the video and the playback controls.
+- **Thumbnail size selector**: View > Thumbnail Size now offers Extra Small / Small / Medium
+  (default, matches the previous fixed size) / Large / Extra Large for the candidate list.
+  Persists across restarts alongside the theme preference.
 
 ## v1.0.12 — 2026-11-21
 

@@ -34,6 +34,13 @@
                         <MenuItem x:Name="LayoutTopMenuItem" Header="Video on Top" IsCheckable="True" Tag="Top" Click="LayoutMenuItem_Click"/>
                     </MenuItem>
                     <MenuItem x:Name="ThemeMenu" Header="_Theme"/>
+                    <MenuItem Header="_Thumbnail Size">
+                        <MenuItem x:Name="ThumbXSMenuItem" Header="Extra Small" IsCheckable="True" Tag="XS" Click="ThumbnailSizeMenuItem_Click"/>
+                        <MenuItem x:Name="ThumbSMenuItem" Header="Small" IsCheckable="True" Tag="S" Click="ThumbnailSizeMenuItem_Click"/>
+                        <MenuItem x:Name="ThumbMMenuItem" Header="Medium" IsCheckable="True" IsChecked="True" Tag="M" Click="ThumbnailSizeMenuItem_Click"/>
+                        <MenuItem x:Name="ThumbLMenuItem" Header="Large" IsCheckable="True" Tag="L" Click="ThumbnailSizeMenuItem_Click"/>
+                        <MenuItem x:Name="ThumbXLMenuItem" Header="Extra Large" IsCheckable="True" Tag="XL" Click="ThumbnailSizeMenuItem_Click"/>
+                    </MenuItem>
                     <Separator/>
                     <MenuItem Header="View _Log" Click="ViewLog_Click"/>
                 </MenuItem>
@@ -95,7 +102,7 @@
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="170"/>
+                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
@@ -104,7 +111,9 @@
                                 <CheckBox Grid.Column="0" IsChecked="{Binding Approved, Mode=TwoWay}" VerticalAlignment="Center"
                                           Margin="0,0,8,0" Checked="ApprovedCheck_Changed" Unchecked="ApprovedCheck_Changed"/>
 
-                                <Image Grid.Column="1" Width="160" Height="90" Stretch="UniformToFill"
+                                <Image Grid.Column="1" Stretch="UniformToFill"
+                                       Width="{Binding DataContext.ThumbnailWidth, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                       Height="{Binding DataContext.ThumbnailHeight, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                        Source="{Binding ThumbnailPath, Converter={StaticResource ImageSourceConv}}"/>
 
                                 <StackPanel Grid.Column="2" Margin="8,0" VerticalAlignment="Center">
@@ -123,24 +132,37 @@
 
             <GridSplitter x:Name="ReviewSplitter" Grid.Column="1" Grid.Row="0" HorizontalAlignment="Stretch" Background="{DynamicResource AppBorderBrush}"/>
 
-            <DockPanel x:Name="PreviewPanel" Grid.Column="2" Grid.Row="0" LastChildFill="False" Background="{DynamicResource AppPanelBackgroundBrush}">
-                <vlc:VideoView x:Name="VideoViewer" DockPanel.Dock="Top" Height="260" Background="Black"/>
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,8,0,0">
-                    <Button Content="Play/Pause" Padding="8,4" Click="PlayPause_Click"/>
-                    <Button Content="Stop" Padding="8,4" Margin="8,0,0,0" Click="StopPreview_Click"/>
-                    <TextBlock Text="Speed:" VerticalAlignment="Center" Margin="12,0,4,0"/>
-                    <ComboBox x:Name="SpeedCombo" Width="70" SelectionChanged="SpeedCombo_SelectionChanged"/>
+            <Grid x:Name="PreviewPanel" Grid.Column="2" Grid.Row="0" Background="{DynamicResource AppPanelBackgroundBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition x:Name="VideoRow" Height="*" MinHeight="150"/>
+                    <RowDefinition Height="6"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <vlc:VideoView x:Name="VideoViewer" Grid.Row="0" Background="Black"/>
+
+                <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Top" Height="6"
+                              ResizeDirection="Rows" Background="{DynamicResource AppBorderBrush}"
+                              ToolTip="Drag to resize the video preview"/>
+
+                <StackPanel Grid.Row="2">
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="Play/Pause" Padding="8,4" Click="PlayPause_Click"/>
+                        <Button Content="Stop" Padding="8,4" Margin="8,0,0,0" Click="StopPreview_Click"/>
+                        <TextBlock Text="Speed:" VerticalAlignment="Center" Margin="12,0,4,0"/>
+                        <ComboBox x:Name="SpeedCombo" Width="70" SelectionChanged="SpeedCombo_SelectionChanged"/>
+                    </StackPanel>
+                    <Slider x:Name="Scrubber" Margin="0,8,0,0" Minimum="0"
+                            Maximum="{Binding DurationSeconds}" ValueChanged="Scrubber_ValueChanged"
+                            IsMoveToPointEnabled="True"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock Text="{Binding CurrentTimeSeconds, Converter={StaticResource Timecode}}" FontWeight="Bold" VerticalAlignment="Center" Width="90"/>
+                        <Button Content="Add Cut Here" Padding="8,4" Margin="8,0,0,0" Click="AddCutHere_Click"/>
+                    </StackPanel>
+                    <TextBlock Margin="0,6,0,0" FontSize="11" Foreground="Gray" TextWrapping="Wrap"
+                               Text="Keyboard: ← / → seek 1s, Ctrl+← / → seek 5s, Alt+← / → seek 10s."/>
                 </StackPanel>
-                <Slider x:Name="Scrubber" DockPanel.Dock="Top" Margin="0,8,0,0" Minimum="0"
-                        Maximum="{Binding DurationSeconds}" ValueChanged="Scrubber_ValueChanged"
-                        IsMoveToPointEnabled="True"/>
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,4,0,0">
-                    <TextBlock Text="{Binding CurrentTimeSeconds, Converter={StaticResource Timecode}}" FontWeight="Bold" VerticalAlignment="Center" Width="90"/>
-                    <Button Content="Add Cut Here" Padding="8,4" Margin="8,0,0,0" Click="AddCutHere_Click"/>
-                </StackPanel>
-                <TextBlock DockPanel.Dock="Top" Margin="0,6,0,0" FontSize="11" Foreground="Gray" TextWrapping="Wrap"
-                           Text="Keyboard: ← / → seek 1s, Ctrl+← / → seek 5s, Alt+← / → seek 10s."/>
-            </DockPanel>
+            </Grid>
         </Grid>
 
         <!-- Timeline -->

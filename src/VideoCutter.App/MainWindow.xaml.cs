@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     private bool _suppressScrubberSeek;
     private bool _uiReady;
     private readonly List<MenuItem> _themeMenuItems = new();
+    private Dictionary<ThumbnailSize, MenuItem> _thumbnailSizeMenuItems = new();
 
     private static readonly double[] SpeedOptions = { 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 4.0 };
 
@@ -98,6 +99,17 @@ public partial class MainWindow : Window
         }
         ThemeManager.Apply(savedTheme, null); // resources now; titlebar once SourceInitialized fires
 
+        var savedThumbSize = ThemeManager.LoadThumbnailSizePreference();
+        _thumbnailSizeMenuItems = new Dictionary<ThumbnailSize, MenuItem>
+        {
+            [ThumbnailSize.XS] = ThumbXSMenuItem,
+            [ThumbnailSize.S] = ThumbSMenuItem,
+            [ThumbnailSize.M] = ThumbMMenuItem,
+            [ThumbnailSize.L] = ThumbLMenuItem,
+            [ThumbnailSize.XL] = ThumbXLMenuItem,
+        };
+        ApplyThumbnailSize(savedThumbSize);
+
         foreach (var s in SpeedOptions)
             SpeedCombo.Items.Add(new ComboBoxItem { Content = $"{s}x", Tag = s });
         SpeedCombo.SelectedIndex = Array.IndexOf(SpeedOptions, 1.0);
@@ -135,6 +147,24 @@ public partial class MainWindow : Window
         // Manual radio behavior: checking one unchecks all the others.
         foreach (var mi in _themeMenuItems) mi.IsChecked = ReferenceEquals(mi, clicked);
         ThemeManager.Apply(theme, this);
+    }
+
+    private void ThumbnailSizeMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_uiReady) return;
+        if (sender is not MenuItem clicked || clicked.Tag is not string tagStr) return;
+        if (!Enum.TryParse<ThumbnailSize>(tagStr, out var size)) return;
+
+        ApplyThumbnailSize(size);
+        ThemeManager.SaveThumbnailSizePreference(size);
+    }
+
+    private void ApplyThumbnailSize(ThumbnailSize size)
+    {
+        foreach (var kv in _thumbnailSizeMenuItems) kv.Value.IsChecked = kv.Key == size;
+        var (width, height, _) = ThumbnailSizes.Sizes[size];
+        _vm.ThumbnailWidth = width;
+        _vm.ThumbnailHeight = height;
     }
 
     private void SpeedCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)

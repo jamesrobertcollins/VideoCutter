@@ -220,35 +220,85 @@ public static class ThemeManager
     private static string SettingsPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VideoCutter", "settings.json");
 
-    private static void SavePreference(AppTheme theme)
+    // Settings.json holds both the theme and the thumbnail-size preference (see ThumbnailSizeManager
+    // below) — read-modify-write so saving one never clobbers the other.
+    private class SettingsModel
+    {
+        public string? Theme { get; set; }
+        public string? ThumbnailSize { get; set; }
+    }
+
+    private static SettingsModel LoadSettingsModel()
     {
         try
         {
-            var dir = Path.GetDirectoryName(SettingsPath)!;
-            Directory.CreateDirectory(dir);
-            File.WriteAllText(SettingsPath, JsonSerializer.Serialize(new { Theme = theme.ToString() }));
+            if (!File.Exists(SettingsPath)) return new SettingsModel();
+            var json = File.ReadAllText(SettingsPath);
+            return JsonSerializer.Deserialize<SettingsModel>(json) ?? new SettingsModel();
         }
         catch (Exception ex)
         {
-            Log.Warn($"Could not save theme preference: {ex.Message}");
+            Log.Warn($"Could not load settings.json, using defaults: {ex.Message}");
+            return new SettingsModel();
         }
+    }
+
+    private static void SaveSettingsModel(SettingsModel model)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
+            File.WriteAllText(SettingsPath, JsonSerializer.Serialize(model));
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Could not save settings.json: {ex.Message}");
+        }
+    }
+
+    private static void SavePreference(AppTheme theme)
+    {
+        var model = LoadSettingsModel();
+        model.Theme = theme.ToString();
+        SaveSettingsModel(model);
     }
 
     public static AppTheme LoadPreference()
     {
-        try
-        {
-            if (!File.Exists(SettingsPath)) return AppTheme.Light;
-            var json = File.ReadAllText(SettingsPath);
-            using var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("Theme", out var el) &&
-                Enum.TryParse<AppTheme>(el.GetString(), out var theme))
-                return theme;
-        }
-        catch (Exception ex)
-        {
-            Log.Warn($"Could not load theme preference, defaulting to Light: {ex.Message}");
-        }
+        var model = LoadSettingsModel();
+        if (model.Theme != null && Enum.TryParse<AppTheme>(model.Theme, out var theme))
+            return theme;
         return AppTheme.Light;
     }
+
+    public static void SaveThumbnailSizePreference(ThumbnailSize size)
+    {
+        var model = LoadSettingsModel();
+        model.ThumbnailSize = size.ToString();
+        SaveSettingsModel(model);
+    }
+
+    public static ThumbnailSize LoadThumbnailSizePreference()
+    {
+        var model = LoadSettingsModel();
+        if (model.ThumbnailSize != null && Enum.TryParse<ThumbnailSize>(model.ThumbnailSize, out var size))
+            return size;
+        return ThumbnailSize.M;
+    }
+}
+
+public enum ThumbnailSize { XS, S, M, L, XL }
+
+/// <summary>Display pixel size per tier (16:9). Thumbnails are generated at a fixed 480px source
+/// width regardless of display size (see ThumbnailService) — plenty of headroom even at XL.</summary>
+public static class ThumbnailSizes
+{
+    public static readonly Dictionary<ThumbnailSize, (int Width, int Height, string DisplayName)> Sizes = new()
+    {
+        [ThumbnailSize.XS] = (80, 45, "Extra Small"),
+        [ThumbnailSize.S] = (120, 68, "Small"),
+        [ThumbnailSize.M] = (160, 90, "Medium"),
+        [ThumbnailSize.L] = (220, 124, "Large"),
+        [ThumbnailSize.XL] = (320, 180, "Extra Large"),
+    };
 }

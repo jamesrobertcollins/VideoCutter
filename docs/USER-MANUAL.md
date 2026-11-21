@@ -71,7 +71,19 @@ see below) with:
 
 Drag the splitter between the two panes to resize them further in either layout.
 
-## 5. Exporting
+The **video preview itself is resizable**: drag the thin handle directly below the video area
+(above the Play/Pause/Speed row) up or down to make the preview larger or smaller — handy if
+you want to lean on a bigger picture when judging an edge-case cut point. It defaults to filling
+most of the available vertical space already.
+
+## 5. Thumbnail size
+
+**View > Thumbnail Size** controls how big each candidate's thumbnail renders in the list:
+Extra Small, Small, Medium (default), Large, or Extra Large. Your choice persists across
+restarts. Larger sizes make individual frames easier to judge at a glance; smaller sizes let you
+see more candidates at once without scrolling.
+
+## 6. Exporting
 
 1. Pick an export mode:
    - **Re-encode (frame-accurate)** — every clip starts and ends at exactly the chosen point
@@ -91,13 +103,13 @@ Your review state (which cuts are approved, any manual edits) **autosaves every 
 `<sourcename>.videocutter.json` next to the source file, so a crash or accidental close won't
 lose your work — reopening the same source resumes exactly where you left off.
 
-## 6. Themes
+## 7. Themes
 
 **View > Theme**: Light, Dark, Cyberpunk, Unix, Pink, Film (adds a filmstrip background image),
 and Win9x. Your choice persists across restarts and also recolors the real Windows titlebar (on
 Windows 11 build 22000+; older Windows keeps the default titlebar chrome).
 
-## 7. Getting help / reporting a problem
+## 8. Getting help / reporting a problem
 
 - **Help > About VideoCutter** shows the exact version you're running, credits, and license info
   (including a **Third-Party Licenses** button covering ffmpeg/libvlc).

@@ -52,6 +52,12 @@ public class MainViewModel : ObservableObject
     /// <summary>Current playhead position, driven by the scrubber/player — not persisted.</summary>
     public double CurrentTimeSeconds { get => _currentTimeSeconds; set => SetProperty(ref _currentTimeSeconds, value); }
 
+    private double _thumbnailWidth = 160;
+    public double ThumbnailWidth { get => _thumbnailWidth; set => SetProperty(ref _thumbnailWidth, value); }
+
+    private double _thumbnailHeight = 90;
+    public double ThumbnailHeight { get => _thumbnailHeight; set => SetProperty(ref _thumbnailHeight, value); }
+
     public ObservableCollection<CutCandidate> Candidates { get; } = new();
     public ObservableCollection<string> Warnings { get; } = new();
     public ObservableCollection<ClipVerification> VerificationResults { get; } = new();
