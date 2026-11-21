@@ -104,10 +104,16 @@ app is still working and hasn't frozen, separate from the progress bar's own per
    already exist continues numbering from the next free index.
 4. Each exported clip is **automatically verified** — non-zero duration, audio present if the
    source had audio, and that all the clip durations roughly sum back to the source's duration.
-   When export finishes, a **results window** pops up with the pass/fail list and a **Save
-   List...** button to write it out as a `.txt` or `.csv` file (handy for a record of what got
-   cut from a long source). This window is a snapshot of that export — starting another export
-   doesn't change what's already showing in an open results window.
+   When export finishes, a **results window** pops up with the pass/fail list, an **Open
+   Folder** button to jump straight to where the clips landed, and a **Save List...** button to
+   write the list out as a `.txt` or `.csv` file (handy for a record of what got cut from a long
+   source). This window is a snapshot of that export — starting another export doesn't change
+   what's already showing in an open results window.
+5. **Delete project file after successful export** (checkbox next to Export Approved Cuts, off
+   by default): once every exported clip passes verification, deletes the
+   `<sourcename>.videocutter.json` autosave next to the source, since the review state is no
+   longer needed once the real clips exist. Left alone if anything fails verification, so you can
+   still review/retry. Your choice persists across restarts.
 
 Your review state (which cuts are approved, any manual edits) **autosaves every 5 seconds** to
 `<sourcename>.videocutter.json` next to the source file, so a crash or accidental close won't

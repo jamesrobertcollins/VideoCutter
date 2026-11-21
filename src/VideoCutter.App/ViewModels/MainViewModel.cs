@@ -24,6 +24,13 @@ public class MainViewModel : ObservableObject
     private readonly VerificationService _verifier = new();
     private DetectionService _detector = new();
 
+    /// <summary>
+    /// Set true right after an opt-in post-export project-file deletion, so the 5s autosave
+    /// timer doesn't just silently recreate the file it was told to clean up. Cleared on any
+    /// genuine edit (candidate add/remove/move, re-detection) or a new file being opened.
+    /// </summary>
+    private bool _suppressAutosave;
+
     public string? SourcePath { get; private set; }
     public string? ThumbnailDir { get; private set; }
 
@@ -46,6 +53,11 @@ public class MainViewModel : ObservableObject
     private bool _isProgressIndeterminate = true;
     /// <summary>True while busy but no real completion fraction is available yet (e.g. probing).</summary>
     public bool IsProgressIndeterminate { get => _isProgressIndeterminate; set => SetProperty(ref _isProgressIndeterminate, value); }
+
+    private bool _deleteProjectFileAfterExport;
+    /// <summary>Opt-in cleanup: delete the `.videocutter.json` autosave once an export fully
+    /// passes verification, since the review state is no longer needed once real clips exist.</summary>
+    public bool DeleteProjectFileAfterExport { get => _deleteProjectFileAfterExport; set => SetProperty(ref _deleteProjectFileAfterExport, value); }
 
     private ExportMode _exportMode = ExportMode.ReEncode;
     public ExportMode ExportMode { get => _exportMode; set => SetProperty(ref _exportMode, value); }
@@ -134,6 +146,7 @@ public class MainViewModel : ObservableObject
             ThumbnailDir = Path.Combine(Path.GetTempPath(), "VideoCutter", Path.GetFileNameWithoutExtension(path));
             Warnings.Clear();
             VerificationResults.Clear();
+            _suppressAutosave = false; // fresh file — any prior cleanup-suppression no longer applies
             // Clear candidates from whatever file was previously open BEFORE anything else runs.
             // Without this, RunDetectionAsync's "preserve manually-added candidates from a prior
             // pass" logic (meant for the Re-run Detection button, same file) would instead carry
@@ -192,6 +205,7 @@ public class MainViewModel : ObservableObject
         {
             Warnings.Clear();
             VerificationResults.Clear(); // stale from a prior export of the old candidate set
+            _suppressAutosave = false; // re-detecting is a real edit — resume autosaving
             var outcome = await _detector.DetectAsync(SourcePath, DurationSeconds, SourceHasAudio, Thresholds, MakeProgress());
 
             foreach (var w in outcome.Warnings) Warnings.Add(w);
@@ -251,6 +265,7 @@ public class MainViewModel : ObservableObject
 
     public void AddCandidate(double timeSeconds)
     {
+        _suppressAutosave = false; // a real edit — resume autosaving even if we just cleaned up
         var c = new CutCandidate
         {
             TimeSeconds = Math.Max(0, Math.Min(DurationSeconds, timeSeconds)),
@@ -265,12 +280,14 @@ public class MainViewModel : ObservableObject
 
     public void RemoveCandidate(CutCandidate c)
     {
+        _suppressAutosave = false;
         Candidates.Remove(c);
         ExportCommand.NotifyCanExecuteChanged();
     }
 
     public void MoveCandidate(CutCandidate c, double newTimeSeconds)
     {
+        _suppressAutosave = false;
         c.TimeSeconds = Math.Max(0, Math.Min(DurationSeconds, newTimeSeconds));
         c.ThumbnailPath = null; // stale — regenerate for the new position
         SortCandidates();
@@ -287,7 +304,7 @@ public class MainViewModel : ObservableObject
 
     public async Task AutosaveAsync()
     {
-        if (SourcePath == null) return;
+        if (SourcePath == null || _suppressAutosave) return;
         var state = new ProjectState
         {
             SourcePath = SourcePath,
@@ -323,6 +340,31 @@ public class MainViewModel : ObservableObject
             var summary = failCount == 0
                 ? $"Exported and verified {plans.Count} clips — all passed."
                 : $"Exported {plans.Count} clips — {failCount} verification issue(s), see below.";
+
+            // Opt-in cleanup: only on a fully clean export (every clip passed verification) —
+            // if anything failed, keep the project file so the user can review/retry.
+            if (failCount == 0 && DeleteProjectFileAfterExport)
+            {
+                var projectPath = ProjectStore.GetProjectPath(SourcePath);
+                try
+                {
+                    if (File.Exists(projectPath))
+                    {
+                        File.Delete(projectPath);
+                        Log.Info($"Deleted project file after successful export: '{projectPath}'");
+                        summary += " Project file deleted.";
+                        _suppressAutosave = true; // don't let the 5s autosave timer immediately recreate it
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Non-fatal — the export itself succeeded; just leave the project file behind
+                    // and say so, rather than letting a cleanup failure look like an export failure.
+                    Log.Warn($"Could not delete project file '{projectPath}' after export: {ex.Message}");
+                    summary += " (Could not delete project file — see log.)";
+                }
+            }
+
             StatusMessage = summary;
             ExportFinished?.Invoke(summary);
         }

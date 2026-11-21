@@ -15,13 +15,21 @@
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <TextBlock x:Name="SummaryText" Grid.Row="0" FontWeight="Bold" FontSize="13" TextWrapping="Wrap" Margin="0,0,0,12"/>
 
-        <Border Grid.Row="1" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="8">
+        <StackPanel x:Name="FolderPanel" Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
+            <TextBlock Text="Output folder: " VerticalAlignment="Center"/>
+            <TextBlock x:Name="FolderPathText" VerticalAlignment="Center" FontFamily="Consolas"
+                       TextTrimming="CharacterEllipsis" MaxWidth="360" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+            <Button Content="Open Folder" Padding="8,2" Margin="12,0,0,0" Click="OpenFolder_Click"/>
+        </StackPanel>
+
+        <Border Grid.Row="2" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="8">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <ItemsControl x:Name="ResultsList">
                     <ItemsControl.ItemTemplate>
@@ -41,7 +49,7 @@
             </ScrollViewer>
         </Border>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Content="Save List..." Padding="10,4" Click="SaveList_Click"/>
             <Button Content="Close" Padding="16,4" Margin="8,0,0,0" IsDefault="True" Click="Close_Click"/>
         </StackPanel>

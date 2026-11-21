@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -62,11 +63,25 @@ public partial class MainWindow : Window
             MessageBox.Show(summary, "VideoCutter — Detection Finished", MessageBoxButton.OK, MessageBoxImage.Information));
         _vm.ExportFinished += summary => Dispatcher.Invoke(() =>
         {
-            var win = new ExportResultsWindow(summary, _vm.VerificationResults) { Owner = this };
+            var outputDir = _vm.SourcePath != null ? Path.GetDirectoryName(Path.GetFullPath(_vm.SourcePath)) : null;
+            var win = new ExportResultsWindow(summary, _vm.VerificationResults, outputDir) { Owner = this };
             win.Show();
         });
         _vm.Faulted += message => Dispatcher.Invoke(() =>
             MessageBox.Show(message, "VideoCutter — Error", MessageBoxButton.OK, MessageBoxImage.Error));
+
+        // Scissors "snip" animation next to the progress bar while any operation is running —
+        // a visual confirmation the app hasn't frozen, independent of the progress bar's percent.
+        var snipStoryboard = (System.Windows.Media.Animation.Storyboard)FindResource("SnipStoryboard");
+        _vm.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName != nameof(MainViewModel.IsBusy)) return;
+            Dispatcher.Invoke(() =>
+            {
+                if (_vm.IsBusy) snipStoryboard.Begin(this, true);
+                else snipStoryboard.Stop(this);
+            });
+        };
 
         _autosaveTimer.Tick += async (_, _) =>
         {
@@ -114,6 +129,8 @@ public partial class MainWindow : Window
             [ThumbnailSize.XL] = ThumbXLMenuItem,
         };
         ApplyThumbnailSize(savedThumbSize);
+
+        _vm.DeleteProjectFileAfterExport = ThemeManager.LoadDeleteProjectFileAfterExportPreference();
 
         foreach (var s in SpeedOptions)
             SpeedCombo.Items.Add(new ComboBoxItem { Content = $"{s}x", Tag = s });
@@ -415,4 +432,10 @@ public partial class MainWindow : Window
     private void ReEncodeRadio_Checked(object sender, RoutedEventArgs e) => _vm.ExportMode = ExportMode.ReEncode;
 
     private void StreamCopyRadio_Checked(object sender, RoutedEventArgs e) => _vm.ExportMode = ExportMode.StreamCopy;
+
+    private void DeleteProjectFileCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_uiReady) return;
+        ThemeManager.SaveDeleteProjectFileAfterExportPreference(_vm.DeleteProjectFileAfterExport);
+    }
 }

@@ -226,6 +226,7 @@ public static class ThemeManager
     {
         public string? Theme { get; set; }
         public string? ThumbnailSize { get; set; }
+        public bool? DeleteProjectFileAfterExport { get; set; }
     }
 
     private static SettingsModel LoadSettingsModel()
@@ -285,6 +286,19 @@ public static class ThemeManager
             return size;
         return ThumbnailSize.M;
     }
+
+    public static void SaveDeleteProjectFileAfterExportPreference(bool value)
+    {
+        var model = LoadSettingsModel();
+        model.DeleteProjectFileAfterExport = value;
+        SaveSettingsModel(model);
+    }
+
+    /// <summary>Opt-in and off by default — deleting the autosave project file is destructive
+    /// (loses the ability to resume/re-export the same review state), so it should never happen
+    /// without the user explicitly having turned it on.</summary>
+    public static bool LoadDeleteProjectFileAfterExportPreference() =>
+        LoadSettingsModel().DeleteProjectFileAfterExport ?? false;
 }
 
 public enum ThumbnailSize { XS, S, M, L, XL }

@@ -14,6 +14,12 @@
     <Window.Resources>
         <conv:TimecodeConverter x:Key="Timecode"/>
         <conv:PathToImageSourceConverter x:Key="ImageSourceConv"/>
+        <Storyboard x:Key="SnipStoryboard" RepeatBehavior="Forever">
+            <DoubleAnimation Storyboard.TargetName="BladeARotate" Storyboard.TargetProperty="Angle"
+                              From="0" To="-26" Duration="0:0:0.28" AutoReverse="True"/>
+            <DoubleAnimation Storyboard.TargetName="BladeBRotate" Storyboard.TargetProperty="Angle"
+                              From="0" To="26" Duration="0:0:0.28" AutoReverse="True"/>
+        </Storyboard>
     </Window.Resources>
 
     <Grid>
@@ -206,38 +212,38 @@
             <RadioButton Content="Re-encode (frame-accurate)" GroupName="mode" IsChecked="True" Checked="ReEncodeRadio_Checked" VerticalAlignment="Center"/>
             <RadioButton Content="Stream copy (fast, keyframe-snapped)" GroupName="mode" Margin="12,0,0,0" Checked="StreamCopyRadio_Checked" VerticalAlignment="Center"/>
             <Button Content="Export Approved Cuts" Padding="12,4" Margin="20,0,0,0" Click="ExportButton_Click"/>
+            <CheckBox x:Name="DeleteProjectFileCheck" Content="Delete project file after successful export"
+                      Margin="20,0,0,0" VerticalAlignment="Center"
+                      IsChecked="{Binding DeleteProjectFileAfterExport, Mode=TwoWay}" Checked="DeleteProjectFileCheck_Changed" Unchecked="DeleteProjectFileCheck_Changed"
+                      ToolTip="Deletes the .videocutter.json autosave next to the source once every exported clip passes verification. Left alone if anything fails."/>
         </StackPanel>
 
         <!-- Status bar: message on the left, progress + busy indicator pinned to the lower-right -->
         <DockPanel Grid.Row="7" Margin="0,8,0,0">
-            <Image x:Name="BusyScissors" DockPanel.Dock="Right" Width="20" Height="20"
-                   Source="pack://application:,,,/Resources/scissors.png"
-                   Margin="8,0,0,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5"
-                   ToolTip="Working — the app hasn't locked up, this takes a moment">
-                <Image.RenderTransform>
-                    <RotateTransform Angle="0"/>
-                </Image.RenderTransform>
-                <Image.Style>
-                    <Style TargetType="Image">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsBusy}" Value="True">
-                                <DataTrigger.EnterActions>
-                                    <BeginStoryboard x:Name="SnipStoryboard">
-                                        <Storyboard RepeatBehavior="Forever">
-                                            <DoubleAnimation
-                                                Storyboard.TargetProperty="(Image.RenderTransform).(RotateTransform.Angle)"
-                                                From="-20" To="20" Duration="0:0:0.3" AutoReverse="True"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </DataTrigger.EnterActions>
-                                <DataTrigger.ExitActions>
-                                    <StopStoryboard BeginStoryboardName="SnipStoryboard"/>
-                                </DataTrigger.ExitActions>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Image.Style>
-            </Image>
+            <Canvas x:Name="BusyScissors" DockPanel.Dock="Right" Width="20" Height="20"
+                    Margin="8,0,0,0" VerticalAlignment="Center"
+                    ToolTip="Working — the app hasn't locked up, this takes a moment">
+                <!-- Handles (fixed) -->
+                <Line X1="10" Y1="10" X2="6" Y2="17" Stroke="{DynamicResource AppForegroundBrush}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                <Line X1="10" Y1="10" X2="14" Y2="17" Stroke="{DynamicResource AppForegroundBrush}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                <!-- Pivot screw -->
+                <Ellipse Canvas.Left="8.3" Canvas.Top="8.3" Width="3.4" Height="3.4" Fill="{DynamicResource AppForegroundBrush}"/>
+                <!-- Blades: both point straight up when closed (angle 0, overlapping = single line);
+                     opening fans them apart into a V. Animated from code-behind (MainWindow.xaml.cs)
+                     via the SnipStoryboard resource — a Storyboard with per-element TargetNames can't
+                     be started from a plain Style.Triggers block (that needs a ControlTemplate's
+                     namescope), so it's a named resource Begin()/Stop() against this window instead. -->
+                <Line X1="10" Y1="10" X2="10" Y2="2" Stroke="{DynamicResource AppForegroundBrush}" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
+                    <Line.RenderTransform>
+                        <RotateTransform x:Name="BladeARotate" CenterX="10" CenterY="10" Angle="0"/>
+                    </Line.RenderTransform>
+                </Line>
+                <Line X1="10" Y1="10" X2="10" Y2="2" Stroke="{DynamicResource AppForegroundBrush}" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
+                    <Line.RenderTransform>
+                        <RotateTransform x:Name="BladeBRotate" CenterX="10" CenterY="10" Angle="0"/>
+                    </Line.RenderTransform>
+                </Line>
+            </Canvas>
             <ProgressBar DockPanel.Dock="Right" Width="150" Height="16"
                          Minimum="0" Maximum="100" Value="{Binding ProgressPercent}"
                          IsIndeterminate="{Binding IsProgressIndeterminate}"

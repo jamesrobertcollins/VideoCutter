@@ -18,16 +18,42 @@ namespace VideoCutter.App;
 public partial class ExportResultsWindow : Window
 {
     private readonly List<ClipVerification> _results;
+    private readonly string? _outputDir;
 
-    public ExportResultsWindow(string summary, IEnumerable<ClipVerification> results)
+    public ExportResultsWindow(string summary, IEnumerable<ClipVerification> results, string? outputDir = null)
     {
         InitializeComponent();
 
         _results = results.ToList();
+        _outputDir = outputDir;
         SummaryText.Text = summary;
         ResultsList.ItemsSource = _results;
 
+        if (_outputDir != null)
+        {
+            FolderPathText.Text = _outputDir;
+        }
+        else
+        {
+            FolderPanel.Visibility = Visibility.Collapsed;
+        }
+
         SourceInitialized += (_, _) => ThemeManager.ApplyTitlebarToWindow(this);
+    }
+
+    private void OpenFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (_outputDir == null) return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_outputDir) { UseShellExecute = true });
+        }
+        catch (System.Exception ex)
+        {
+            Log.Error($"Failed to open output folder '{_outputDir}'", ex);
+            MessageBox.Show($"Could not open the folder: {ex.Message}\n\n{_outputDir}", "VideoCutter — Open Folder Failed",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void SaveList_Click(object sender, RoutedEventArgs e)

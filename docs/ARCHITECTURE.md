@@ -101,6 +101,14 @@ the property you're setting before assuming a simple `Setter` will work.
 - **`ProjectStore`**: autosaves review state (every 5s) to `<name>.videocutter.json` next to the
   source; `LoadAsync` treats any deserialization failure as "no autosave" rather than throwing
   (this was the fix for a reported crash-on-load).
+- **Opt-in project-file cleanup**: on a fully-passed export (`failCount == 0`),
+  `MainViewModel.ExportAsync` deletes the project file if `DeleteProjectFileAfterExport` is set,
+  and also sets `_suppressAutosave = true`. That second part matters: without it, the 5s autosave
+  timer (`MainWindow`'s `_autosaveTimer`, which just checks `SourcePath != null`) would recreate
+  the file it was just told to delete within one tick. `_suppressAutosave` is cleared on any
+  genuine edit afterward (`AddCandidate`/`RemoveCandidate`/`MoveCandidate`/re-detection) or when a
+  new file is opened, so autosaving resumes normally the moment there's something new worth
+  saving.
 - **Results popup**: `MainViewModel.ExportFinished` fires once export+verification completes;
   `MainWindow` opens an `ExportResultsWindow` with a *snapshot* (`.ToList()`, not the live
   `ObservableCollection`) of that export's results, so the popup stays frozen to the export it
