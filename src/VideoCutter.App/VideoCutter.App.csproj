@@ -57,6 +57,7 @@
     <Resource Include="Resources\app.ico" />
     <Resource Include="Resources\scissors.png" />
     <Resource Include="Resources\filmstrip.jpg" />
+    <Resource Include="Resources\Scissors\*.png" />
   </ItemGroup>
 
   <!--

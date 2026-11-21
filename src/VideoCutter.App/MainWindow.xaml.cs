@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using LibVLCSharp.Shared;
 using Microsoft.Win32;
@@ -23,6 +24,13 @@ public partial class MainWindow : Window
     private LibVLC? _libVlc;
     private MediaPlayer? _player;
     private readonly DispatcherTimer _autosaveTimer = new() { Interval = TimeSpan.FromSeconds(5) };
+
+    // Scissors busy-indicator: a 30-frame sprite sequence (user-supplied GIF, extracted/matted/
+    // cropped to transparent PNGs) cycled at the GIF's original 10fps. Frame 0 is the closed/rest
+    // pose; frames cycle through an open-and-close "snip" while IsBusy, then snap back to frame 0.
+    private readonly List<BitmapImage> _scissorFrames = new();
+    private readonly DispatcherTimer _scissorTimer = new() { Interval = TimeSpan.FromMilliseconds(100) };
+    private int _scissorFrameIndex;
     private bool _suppressScrubberSeek;
     private bool _uiReady;
     private readonly List<MenuItem> _themeMenuItems = new();
@@ -77,14 +85,38 @@ public partial class MainWindow : Window
 
         // Scissors "snip" animation next to the progress bar while any operation is running —
         // a visual confirmation the app hasn't frozen, independent of the progress bar's percent.
-        var snipStoryboard = (System.Windows.Media.Animation.Storyboard)FindResource("SnipStoryboard");
+        for (int i = 1; i <= 30; i++)
+        {
+            var frame = new BitmapImage();
+            frame.BeginInit();
+            frame.UriSource = new Uri($"pack://application:,,,/Resources/Scissors/scissors_{i:000}.png");
+            frame.CacheOption = BitmapCacheOption.OnLoad;
+            frame.EndInit();
+            frame.Freeze();
+            _scissorFrames.Add(frame);
+        }
+        BusyScissors.Source = _scissorFrames[0]; // closed/rest pose, visible even when idle
+        _scissorTimer.Tick += (_, _) =>
+        {
+            _scissorFrameIndex = (_scissorFrameIndex + 1) % _scissorFrames.Count;
+            BusyScissors.Source = _scissorFrames[_scissorFrameIndex];
+        };
         _vm.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName != nameof(MainViewModel.IsBusy)) return;
             Dispatcher.Invoke(() =>
             {
-                if (_vm.IsBusy) snipStoryboard.Begin(this, true);
-                else snipStoryboard.Stop(this);
+                if (_vm.IsBusy)
+                {
+                    _scissorFrameIndex = 0;
+                    _scissorTimer.Start();
+                }
+                else
+                {
+                    _scissorTimer.Stop();
+                    _scissorFrameIndex = 0;
+                    BusyScissors.Source = _scissorFrames[0];
+                }
             });
         };
 

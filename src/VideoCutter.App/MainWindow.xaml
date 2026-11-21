@@ -14,12 +14,6 @@
     <Window.Resources>
         <conv:TimecodeConverter x:Key="Timecode"/>
         <conv:PathToImageSourceConverter x:Key="ImageSourceConv"/>
-        <Storyboard x:Key="SnipStoryboard" RepeatBehavior="Forever">
-            <DoubleAnimation Storyboard.TargetName="BladeARotate" Storyboard.TargetProperty="Angle"
-                              From="0" To="-26" Duration="0:0:0.28" AutoReverse="True"/>
-            <DoubleAnimation Storyboard.TargetName="BladeBRotate" Storyboard.TargetProperty="Angle"
-                              From="0" To="26" Duration="0:0:0.28" AutoReverse="True"/>
-        </Storyboard>
     </Window.Resources>
 
     <Grid>
@@ -221,30 +215,9 @@
 
         <!-- Status bar: message on the left, progress + busy indicator pinned to the lower-right -->
         <DockPanel Grid.Row="7" Margin="0,8,0,0">
-            <Canvas x:Name="BusyScissors" DockPanel.Dock="Right" Width="20" Height="20"
-                    Margin="8,0,0,0" VerticalAlignment="Center"
-                    ToolTip="Working — the app hasn't locked up, this takes a moment">
-                <!-- Handles (fixed) -->
-                <Line X1="10" Y1="10" X2="6" Y2="17" Stroke="{DynamicResource AppForegroundBrush}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                <Line X1="10" Y1="10" X2="14" Y2="17" Stroke="{DynamicResource AppForegroundBrush}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                <!-- Pivot screw -->
-                <Ellipse Canvas.Left="8.3" Canvas.Top="8.3" Width="3.4" Height="3.4" Fill="{DynamicResource AppForegroundBrush}"/>
-                <!-- Blades: both point straight up when closed (angle 0, overlapping = single line);
-                     opening fans them apart into a V. Animated from code-behind (MainWindow.xaml.cs)
-                     via the SnipStoryboard resource — a Storyboard with per-element TargetNames can't
-                     be started from a plain Style.Triggers block (that needs a ControlTemplate's
-                     namescope), so it's a named resource Begin()/Stop() against this window instead. -->
-                <Line X1="10" Y1="10" X2="10" Y2="2" Stroke="{DynamicResource AppForegroundBrush}" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
-                    <Line.RenderTransform>
-                        <RotateTransform x:Name="BladeARotate" CenterX="10" CenterY="10" Angle="0"/>
-                    </Line.RenderTransform>
-                </Line>
-                <Line X1="10" Y1="10" X2="10" Y2="2" Stroke="{DynamicResource AppForegroundBrush}" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
-                    <Line.RenderTransform>
-                        <RotateTransform x:Name="BladeBRotate" CenterX="10" CenterY="10" Angle="0"/>
-                    </Line.RenderTransform>
-                </Line>
-            </Canvas>
+            <Image x:Name="BusyScissors" DockPanel.Dock="Right" Width="24" Height="24"
+                   Margin="8,0,0,0" VerticalAlignment="Center" Stretch="Uniform"
+                   ToolTip="Working — the app hasn't locked up, this takes a moment"/>
             <ProgressBar DockPanel.Dock="Right" Width="150" Height="16"
                          Minimum="0" Maximum="100" Value="{Binding ProgressPercent}"
                          IsIndeterminate="{Binding IsProgressIndeterminate}"

@@ -28,7 +28,9 @@ file groups changes by *topic* across commits for human readability, not 1:1 by 
   (stream-copy mode) and verification, and for re-encode export specifically, a live percentage
   parsed directly from ffmpeg's own progress output as it encodes.
 - **Busy indicator**: a small scissors icon next to the progress bar animates (snips back and
-  forth) while any operation is running, as a quick visual confirmation the app hasn't frozen.
+  forth) while any operation is running, as a quick visual confirmation the app hasn't frozen —
+  now a real 30-frame sprite animation (from a user-supplied GIF, background-keyed to
+  transparent and rotated ~45° counter-clockwise) instead of a hand-drawn vector icon.
 - **Resizable video preview**: the preview area is no longer a fixed 260px height — it fills
   most of the available vertical space by default and can be dragged larger/smaller via a
   handle between the video and the playback controls.
