@@ -52,13 +52,18 @@ tied to any automatic feature/commit threshold.
 ## Releasing a Windows binary
 
 ```
-# From the repo root, with any pending commits already pushed:
+tools/publish-release.sh
+```
+
+This does the equivalent of:
+
+```
 taskkill /F /IM VideoCutter.exe   # in case a debug instance is still running
 rm -rf publish
 dotnet publish src/VideoCutter.App/VideoCutter.App.csproj -c Release -r win-x64 --self-contained true -o publish/VideoCutter-win-x64
 ```
 
-This produces a self-contained folder (no .NET runtime required on the target machine) with
+It produces a self-contained folder (no .NET runtime required on the target machine) with
 `VideoCutter.exe`, the bundled ffmpeg/ffprobe + their LICENSE.txt, `LICENSE`,
 `THIRD-PARTY-NOTICES.md`, and `licenses/` all copied in automatically (same `Content` items used
 for a normal build). The version baked into the exe matches the current `git rev-list --count
