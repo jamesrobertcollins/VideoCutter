@@ -13,14 +13,19 @@ public class VerificationService
         List<SegmentPlan> plans,
         bool sourceHasAudio,
         double sourceDuration,
+        IProgress<(string Message, double? Percent)>? progress = null,
         CancellationToken ct = default)
     {
         Log.Info($"Verifying {plans.Count} clip(s) in '{outputDir}'");
         var results = new List<ClipVerification>();
         double sumDuration = 0;
 
-        foreach (var plan in plans)
+        for (int i = 0; i < plans.Count; i++)
         {
+            var plan = plans[i];
+            var pct = plans.Count > 0 ? 100.0 * i / plans.Count : (double?)null;
+            progress?.Report(($"Verifying {plan.FileName}... ({i + 1}/{plans.Count})", pct));
+
             var path = Path.Combine(outputDir, plan.FileName);
             var v = new ClipVerification { FileName = plan.FileName };
 
@@ -55,6 +60,7 @@ public class VerificationService
             results.Add(new ClipVerification { FileName = "(total)", Passed = false, Message = msg });
         }
 
+        progress?.Report(("Verification finished.", 100.0));
         Log.Info($"Verification finished: {results.Count(r => r.Passed)}/{plans.Count} clip(s) passed.");
         return results;
     }

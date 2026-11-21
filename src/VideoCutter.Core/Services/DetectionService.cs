@@ -21,7 +21,7 @@ public class DetectionService
         double durationSeconds,
         bool sourceHasAudio,
         DetectionThresholds thresholds,
-        IProgress<string>? progress = null,
+        IProgress<(string Message, double? Percent)>? progress = null,
         CancellationToken ct = default)
     {
         Log.Info($"Detection starting for '{sourcePath}' duration={durationSeconds:F2}s hasAudio={sourceHasAudio}");
@@ -29,8 +29,10 @@ public class DetectionService
         {
             var warnings = new List<string>();
             var tagged = new List<(double Time, CandidateSource Source)>();
+            var totalPhases = sourceHasAudio ? 3 : 2;
+            var phase = 0;
 
-            progress?.Report("Detecting black frames...");
+            progress?.Report(("Detecting black frames...", 100.0 * phase / totalPhases)); phase++;
             var blackArgs = $"-an -vf \"blackdetect=d={F(thresholds.BlackMinDuration)}:pic_th={F(thresholds.BlackPictureThreshold)}\"";
             var blackHits = await RunDetectAsync(sourcePath, blackArgs, BlackRegex, ct);
             Log.Info($"  black: {blackHits.Count} hit(s)");
@@ -38,7 +40,7 @@ public class DetectionService
 
             if (sourceHasAudio)
             {
-                progress?.Report("Detecting silence...");
+                progress?.Report(("Detecting silence...", 100.0 * phase / totalPhases)); phase++;
                 var silenceArgs = $"-vn -af \"silencedetect=n={F(thresholds.SilenceThresholdDb)}dB:d={F(thresholds.SilenceMinDuration)}\"";
                 var silenceHits = await RunDetectAsync(sourcePath, silenceArgs, SilenceStartRegex, ct);
                 Log.Info($"  silence: {silenceHits.Count} hit(s)");
@@ -49,7 +51,7 @@ public class DetectionService
                 warnings.Add("Source has no audio track — silence detection skipped; relying on black-frame and scene-change detection only.");
             }
 
-            progress?.Report("Detecting scene changes...");
+            progress?.Report(("Detecting scene changes...", 100.0 * phase / totalPhases)); phase++;
             var sceneArgs = $"-an -vf \"select='gt(scene,{F(thresholds.SceneThreshold)})',showinfo\"";
             var sceneHits = await RunDetectAsync(sourcePath, sceneArgs, SceneRegex, ct);
             Log.Info($"  scene: {sceneHits.Count} hit(s)");
@@ -62,6 +64,7 @@ public class DetectionService
 
             var spaced = ApplyMinSpacing(merged, thresholds.MinSegmentSeconds);
             Log.Info($"Detection finished: {tagged.Count} raw hits -> {merged.Count} merged -> {spaced.Count} after min-spacing.");
+            progress?.Report(("Detection finished.", 100.0));
 
             return new DetectionOutcome(spaced, warnings);
         }

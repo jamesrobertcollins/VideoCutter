@@ -16,7 +16,8 @@ Console.WriteLine($"Duration={probeResult.DurationSeconds:F2}s HasAudio={probeRe
 Console.WriteLine("=== Detecting candidates ===");
 var thresholds = new DetectionThresholds();
 var detector = new DetectionService();
-var progress = new Progress<string>(m => Console.WriteLine($"  [progress] {m}"));
+var progress = new Progress<(string Message, double? Percent)>(p =>
+    Console.WriteLine($"  [progress] {p.Message}" + (p.Percent.HasValue ? $" ({p.Percent.Value:F0}%)" : "")));
 var outcome = await detector.DetectAsync(path, probeResult.DurationSeconds, probeResult.HasAudio, thresholds, progress);
 
 foreach (var w in outcome.Warnings) Console.WriteLine($"  [warning] {w}");
@@ -40,7 +41,7 @@ await exporter.ExportAsync(path, plans, ExportMode.ReEncode, progress);
 Console.WriteLine("=== Verifying ===");
 var verifier = new VerificationService();
 var outputDir = Path.GetDirectoryName(Path.GetFullPath(path))!;
-var results = await verifier.VerifyAsync(outputDir, plans, probeResult.HasAudio, probeResult.DurationSeconds);
+var results = await verifier.VerifyAsync(outputDir, plans, probeResult.HasAudio, probeResult.DurationSeconds, progress);
 foreach (var r in results)
     Console.WriteLine($"  {r.FileName}: passed={r.Passed} duration={r.DurationSeconds:F2}s hasAudio={r.HasAudio} msg={r.Message}");
 

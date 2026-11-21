@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using VideoCutter.Core.Models;
 
 namespace VideoCutter.Core.Services;
@@ -56,7 +57,7 @@ public class ExportService
         string sourcePath,
         List<SegmentPlan> plans,
         ExportMode mode,
-        IProgress<string>? progress = null,
+        IProgress<(string Message, double? Percent)>? progress = null,
         CancellationToken ct = default)
     {
         Log.Info($"Export starting for '{sourcePath}': {plans.Count} segment(s), mode={mode}");
@@ -67,21 +68,27 @@ public class ExportService
 
             if (mode == ExportMode.StreamCopy)
             {
-                foreach (var plan in plans)
+                for (int i = 0; i < plans.Count; i++)
                 {
                     ct.ThrowIfCancellationRequested();
-                    progress?.Report($"Exporting {plan.FileName} (stream copy)...");
+                    var plan = plans[i];
+                    var pct = plans.Count > 0 ? 100.0 * i / plans.Count : (double?)null;
+                    progress?.Report(($"Exporting {plan.FileName} (stream copy)... ({i + 1}/{plans.Count})", pct));
                     var outPath = Path.Combine(outputDir, plan.FileName);
                     var args = $"-y -ss {F(plan.StartSeconds)} -i \"{sourcePath}\" -t {F(plan.DurationSeconds)} -c copy \"{outPath}\"";
                     await RunOrThrow(args, ct);
                 }
+                progress?.Report(("Export finished.", 100.0));
                 Log.Info($"Export finished (stream copy): {plans.Count} clip(s) written to '{outputDir}'.");
                 return;
             }
 
             // Re-encode: single ffmpeg segment pass is far faster than N re-encodes, so we do the
             // whole file at once with ffmpeg's own sequential naming, then rename to our plan.
-            progress?.Report("Re-encoding and segmenting (this can take a while)...");
+            // Total duration being encoded = the last plan's end time (boundaries span 0..source
+            // duration), used to turn ffmpeg's live "time=" stats into a real percent-complete.
+            var totalDuration = plans.Count > 0 ? plans[^1].EndSeconds : 0;
+            progress?.Report(("Re-encoding and segmenting (this can take a while)...", 0.0));
             var tempDir = Path.Combine(outputDir, $".videocutter_tmp_{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDir);
             try
@@ -92,7 +99,19 @@ public class ExportService
                 var args = $"-y -i \"{sourcePath}\" -map 0:v:0 -map \"0:a:0?\" " +
                            $"-c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -c:a aac -b:a 192k " +
                            $"-f segment -segment_times {segTimes} -reset_timestamps 1 \"{pattern}\"";
-                await RunOrThrow(args, ct);
+
+                void OnLine(string line)
+                {
+                    var m = FfmpegTimeRegex.Match(line);
+                    if (!m.Success) return;
+                    var elapsed = double.Parse(m.Groups["h"].Value, CultureInfo.InvariantCulture) * 3600
+                                + double.Parse(m.Groups["m"].Value, CultureInfo.InvariantCulture) * 60
+                                + double.Parse(m.Groups["s"].Value, CultureInfo.InvariantCulture);
+                    var pct = totalDuration > 0 ? Math.Min(99.0, elapsed / totalDuration * 100) : (double?)null;
+                    progress?.Report(($"Re-encoding and segmenting... {pct:F0}%", pct));
+                }
+
+                await RunOrThrow(args, ct, OnLine);
 
                 for (int i = 0; i < plans.Count; i++)
                 {
@@ -103,6 +122,7 @@ public class ExportService
                     else
                         throw new InvalidOperationException($"Expected segment output '{src}' was not produced by ffmpeg.");
                 }
+                progress?.Report(("Export finished.", 100.0));
                 Log.Info($"Export finished (re-encode): {plans.Count} clip(s) written to '{outputDir}'.");
             }
             finally
@@ -117,9 +137,11 @@ public class ExportService
         }
     }
 
-    private static async Task RunOrThrow(string args, CancellationToken ct)
+    private static readonly Regex FfmpegTimeRegex = new(@"time=(?<h>\d+):(?<m>\d+):(?<s>\d+\.\d+)", RegexOptions.Compiled);
+
+    private static async Task RunOrThrow(string args, CancellationToken ct, Action<string>? onStderrLine = null)
     {
-        var (_, stderr, exitCode) = await ProcessRunner.RunAsync(FfmpegLocator.FfmpegPath, args, ct);
+        var (_, stderr, exitCode) = await ProcessRunner.RunAsync(FfmpegLocator.FfmpegPath, args, ct, onStderrLine);
         if (exitCode != 0)
         {
             Log.Error($"ffmpeg export failed (exit {exitCode}): {Tail(stderr, 2000)}");

@@ -8,6 +8,18 @@ file groups changes by *topic* across commits for human readability, not 1:1 by 
 
 ## Unreleased / in progress
 
+- **Fixed**: opening a different source file while another was already loaded leaked that
+  previous file's manually-added candidates into the new file's candidate list (tagged
+  "Manual", clustered invisibly at the very start of the timeline — looked like detected
+  candidates simply weren't showing up). Candidates now always clear at the start of opening
+  any new file.
+- **Export results popup**: export/verification results now show in a dedicated results window
+  with a **Save List...** button (saves as `.txt` or `.csv`) instead of an inline list on the
+  main window that lingered until the next file was opened.
+- **Meaningful progress bar**: the progress bar is no longer a plain animation — it shows real
+  completion: phase-by-phase during detection (black/silence/scene), per-clip during export
+  (stream-copy mode) and verification, and for re-encode export specifically, a live percentage
+  parsed directly from ffmpeg's own progress output as it encodes.
 - **Resizable video preview**: the preview area is no longer a fixed 260px height — it fills
   most of the available vertical space by default and can be dragged larger/smaller via a
   handle between the video and the playback controls.

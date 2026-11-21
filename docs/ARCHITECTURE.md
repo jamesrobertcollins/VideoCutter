@@ -19,6 +19,7 @@ VideoCutter.slnx
 │   ├── Services/ThemeManager.cs      theme definitions + DWM titlebar coloring + persistence
 │   ├── MainWindow.xaml(.cs)          main UI
 │   ├── AboutWindow.xaml(.cs)         About box, License / Third-Party Licenses viewers
+│   ├── ExportResultsWindow.xaml(.cs) export/verification results popup, Save List...
 │   └── App.xaml                      app-wide themed control styles/templates
 ├── src/VideoCutter.SmokeTest/   headless console harness: full pipeline without the GUI
 ├── tools/Get-Ffmpeg.ps1         fetches ffmpeg.exe/ffprobe.exe (+ LICENSE.txt) at build time
@@ -100,6 +101,27 @@ the property you're setting before assuming a simple `Setter` will work.
 - **`ProjectStore`**: autosaves review state (every 5s) to `<name>.videocutter.json` next to the
   source; `LoadAsync` treats any deserialization failure as "no autosave" rather than throwing
   (this was the fix for a reported crash-on-load).
+- **Results popup**: `MainViewModel.ExportFinished` fires once export+verification completes;
+  `MainWindow` opens an `ExportResultsWindow` with a *snapshot* (`.ToList()`, not the live
+  `ObservableCollection`) of that export's results, so the popup stays frozen to the export it
+  was opened for even if another export runs while it's still open.
+
+## Progress reporting
+
+Detection/export/verification all report `IProgress<(string Message, double? Percent)>` instead
+of a bare message string — `Percent` is `null` only when no real fraction is knowable yet (e.g.
+the initial probe), in which case the UI falls back to an indeterminate marquee
+(`MainViewModel.IsProgressIndeterminate`); otherwise the progress bar shows the real value.
+
+- **Detection**: phase-based (black/silence/scene are discrete ffmpeg passes) — percent jumps in
+  thirds (or halves if the source has no audio and silence detection is skipped).
+- **Export/verification**: per-clip (`i / total`) for stream-copy export and all of
+  verification, since both iterate one file at a time.
+- **Re-encode export** is the one case needing *continuous* progress, since it's a single ffmpeg
+  invocation covering every segment at once. `ProcessRunner.RunAsync` gained an optional
+  `onStderrLine` callback so `ExportService` can regex-match ffmpeg's own periodic `time=HH:MM:SS`
+  stats lines as they stream in and compute `elapsed / totalDuration`, rather than waiting for
+  the whole process to exit before reporting anything.
 
 ## Logging & crash hardening
 

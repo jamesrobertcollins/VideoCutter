@@ -60,6 +60,11 @@ public partial class MainWindow : Window
         _vm.CandidatesReset += () => Dispatcher.Invoke(() => Timeline.Rebuild());
         _vm.DetectionFinished += summary => Dispatcher.Invoke(() =>
             MessageBox.Show(summary, "VideoCutter — Detection Finished", MessageBoxButton.OK, MessageBoxImage.Information));
+        _vm.ExportFinished += summary => Dispatcher.Invoke(() =>
+        {
+            var win = new ExportResultsWindow(summary, _vm.VerificationResults) { Owner = this };
+            win.Show();
+        });
         _vm.Faulted += message => Dispatcher.Invoke(() =>
             MessageBox.Show(message, "VideoCutter — Error", MessageBoxButton.OK, MessageBoxImage.Error));
 

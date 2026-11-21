@@ -91,13 +91,19 @@ see more candidates at once without scrolling.
    - **Stream copy (fast, keyframe-snapped)** — much faster, no re-encoding, but each cut snaps to
      the nearest keyframe, so the exact start/end can be off by up to a keyframe interval.
 2. Click **Export Approved Cuts**. Every segment between two approved (checked) cuts — and the
-   source start/end — becomes its own clip.
+   source start/end — becomes its own clip. The progress bar shows real completion (not just an
+   animation): phase-by-phase during detection, per-clip during export/verification, and for
+   re-encode mode specifically, a live percentage parsed from ffmpeg's own progress output as it
+   encodes.
 3. Clips land in the **same folder as the source**, named `OriginalName_00.mp4`, `_01.mp4`, and
    so on. Naming never overwrites: re-running export on a source whose `_00`/`_01`/... files
    already exist continues numbering from the next free index.
 4. Each exported clip is **automatically verified** — non-zero duration, audio present if the
    source had audio, and that all the clip durations roughly sum back to the source's duration.
-   Pass/fail for each clip shows below the export button.
+   When export finishes, a **results window** pops up with the pass/fail list and a **Save
+   List...** button to write it out as a `.txt` or `.csv` file (handy for a record of what got
+   cut from a long source). This window is a snapshot of that export — starting another export
+   doesn't change what's already showing in an open results window.
 
 Your review state (which cuts are approved, any manual edits) **autosaves every 5 seconds** to
 `<sourcename>.videocutter.json` next to the source file, so a crash or accidental close won't

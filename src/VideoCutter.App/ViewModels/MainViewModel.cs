@@ -39,6 +39,14 @@ public class MainViewModel : ObservableObject
     private bool _isBusy;
     public bool IsBusy { get => _isBusy; set => SetProperty(ref _isBusy, value); }
 
+    private double _progressPercent;
+    /// <summary>0-100 when a real fraction is known; meaningless while IsProgressIndeterminate.</summary>
+    public double ProgressPercent { get => _progressPercent; set => SetProperty(ref _progressPercent, value); }
+
+    private bool _isProgressIndeterminate = true;
+    /// <summary>True while busy but no real completion fraction is available yet (e.g. probing).</summary>
+    public bool IsProgressIndeterminate { get => _isProgressIndeterminate; set => SetProperty(ref _isProgressIndeterminate, value); }
+
     private ExportMode _exportMode = ExportMode.ReEncode;
     public ExportMode ExportMode { get => _exportMode; set => SetProperty(ref _exportMode, value); }
 
@@ -71,6 +79,9 @@ public class MainViewModel : ObservableObject
     /// <summary>Fired once detection finishes, so the view can pop up a "you can interact now" notice.</summary>
     public event Action<string>? DetectionFinished;
 
+    /// <summary>Fired once export+verification finishes, so the view can show the results popup.</summary>
+    public event Action<string>? ExportFinished;
+
     /// <summary>
     /// Fired when an operation fails. The view shows this instead of the exception taking down
     /// the whole app — every risky method below catches internally and routes here.
@@ -91,9 +102,31 @@ public class MainViewModel : ObservableObject
         ExportCommand = new AsyncRelayCommand(ExportAsync, () => SourcePath != null && Candidates.Any(c => c.Approved));
     }
 
+    /// <summary>
+    /// Turns a service's (message, percent) progress report into StatusMessage + a real
+    /// ProgressPercent, falling back to the indeterminate marquee only when percent is unknown
+    /// (e.g. the initial probe, before any phase/clip count is known).
+    /// </summary>
+    private IProgress<(string Message, double? Percent)> MakeProgress() =>
+        new Progress<(string Message, double? Percent)>(p =>
+        {
+            StatusMessage = p.Message;
+            if (p.Percent.HasValue)
+            {
+                ProgressPercent = p.Percent.Value;
+                IsProgressIndeterminate = false;
+            }
+            else
+            {
+                IsProgressIndeterminate = true;
+            }
+        });
+
     public async Task OpenFileAsync(string path)
     {
         IsBusy = true;
+        IsProgressIndeterminate = true;
+        ProgressPercent = 0;
         try
         {
             Log.Info($"OpenFileAsync: '{path}'");
@@ -101,6 +134,12 @@ public class MainViewModel : ObservableObject
             ThumbnailDir = Path.Combine(Path.GetTempPath(), "VideoCutter", Path.GetFileNameWithoutExtension(path));
             Warnings.Clear();
             VerificationResults.Clear();
+            // Clear candidates from whatever file was previously open BEFORE anything else runs.
+            // Without this, RunDetectionAsync's "preserve manually-added candidates from a prior
+            // pass" logic (meant for the Re-run Detection button, same file) would instead carry
+            // the PREVIOUS file's manual candidates into this unrelated new file.
+            Candidates.Clear();
+            CandidatesReset?.Invoke();
 
             StatusMessage = "Probing source...";
             var probe = await _probe.ProbeAsync(path);
@@ -147,11 +186,13 @@ public class MainViewModel : ObservableObject
     {
         if (SourcePath == null) return;
         IsBusy = true;
+        IsProgressIndeterminate = true;
+        ProgressPercent = 0;
         try
         {
             Warnings.Clear();
-            var progress = new Progress<string>(m => StatusMessage = m);
-            var outcome = await _detector.DetectAsync(SourcePath, DurationSeconds, SourceHasAudio, Thresholds, progress);
+            VerificationResults.Clear(); // stale from a prior export of the old candidate set
+            var outcome = await _detector.DetectAsync(SourcePath, DurationSeconds, SourceHasAudio, Thresholds, MakeProgress());
 
             foreach (var w in outcome.Warnings) Warnings.Add(w);
 
@@ -262,24 +303,28 @@ public class MainViewModel : ObservableObject
     {
         if (SourcePath == null) return;
         IsBusy = true;
+        IsProgressIndeterminate = true;
+        ProgressPercent = 0;
         try
         {
             VerificationResults.Clear();
             var approvedTimes = Candidates.Where(c => c.Approved).Select(c => c.TimeSeconds).OrderBy(t => t).ToList();
             var plans = _exporter.PlanSegments(SourcePath, approvedTimes, DurationSeconds);
 
-            var progress = new Progress<string>(m => StatusMessage = m);
-            await _exporter.ExportAsync(SourcePath, plans, ExportMode, progress);
+            await _exporter.ExportAsync(SourcePath, plans, ExportMode, MakeProgress());
 
+            IsProgressIndeterminate = true;
             StatusMessage = "Verifying exported clips...";
             var outputDir = Path.GetDirectoryName(Path.GetFullPath(SourcePath))!;
-            var results = await _verifier.VerifyAsync(outputDir, plans, SourceHasAudio, DurationSeconds);
+            var results = await _verifier.VerifyAsync(outputDir, plans, SourceHasAudio, DurationSeconds, MakeProgress());
             foreach (var r in results) VerificationResults.Add(r);
 
             var failCount = results.Count(r => !r.Passed);
-            StatusMessage = failCount == 0
+            var summary = failCount == 0
                 ? $"Exported and verified {plans.Count} clips — all passed."
                 : $"Exported {plans.Count} clips — {failCount} verification issue(s), see below.";
+            StatusMessage = summary;
+            ExportFinished?.Invoke(summary);
         }
         catch (Exception ex)
         {

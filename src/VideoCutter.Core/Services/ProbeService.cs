@@ -67,7 +67,8 @@ public class ProbeService
 /// <summary>Shared helper for launching ffmpeg/ffprobe and capturing their output.</summary>
 internal static class ProcessRunner
 {
-    public static async Task<(string Stdout, string Stderr, int ExitCode)> RunAsync(string exe, string args, CancellationToken ct = default)
+    public static async Task<(string Stdout, string Stderr, int ExitCode)> RunAsync(
+        string exe, string args, CancellationToken ct = default, Action<string>? onStderrLine = null)
     {
         Log.Process(exe, args);
         var psi = new ProcessStartInfo(exe, args)
@@ -99,10 +100,24 @@ internal static class ProcessRunner
         using (p)
         {
             var stdoutTask = p.StandardOutput.ReadToEndAsync(ct);
-            var stderrTask = p.StandardError.ReadToEndAsync(ct);
+
+            // Read stderr line-by-line (rather than ReadToEndAsync in bulk) so callers can watch
+            // ffmpeg's periodic progress stats (frame=/time=...) as they stream in, instead of
+            // only seeing output after the whole process has already exited.
+            var stderrBuilder = new System.Text.StringBuilder();
+            var stderrTask = Task.Run(async () =>
+            {
+                string? line;
+                while ((line = await p.StandardError.ReadLineAsync(ct)) != null)
+                {
+                    stderrBuilder.AppendLine(line);
+                    onStderrLine?.Invoke(line);
+                }
+            }, ct);
+
             await Task.WhenAll(stdoutTask, stderrTask);
             await p.WaitForExitAsync(ct);
-            return (await stdoutTask, await stderrTask, p.ExitCode);
+            return (await stdoutTask, stderrBuilder.ToString(), p.ExitCode);
         }
     }
 }
