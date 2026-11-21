@@ -120,16 +120,16 @@
                                 <Border x:Name="Bg" Background="{TemplateBinding Background}" BorderThickness="0">
                                     <Grid Margin="{TemplateBinding Padding}">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="18"/>
+                                            <ColumnDefinition x:Name="CheckCol" Width="18"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="14"/>
+                                            <ColumnDefinition x:Name="GestureCol" Width="Auto"/>
+                                            <ColumnDefinition x:Name="ArrowCol" Width="14"/>
                                         </Grid.ColumnDefinitions>
                                         <Path x:Name="CheckMark" Grid.Column="0" Data="M0,4 L3,7 L8,0"
                                               Stroke="{TemplateBinding Foreground}" StrokeThickness="1.6"
                                               Width="8" Height="8" Stretch="Uniform" VerticalAlignment="Center"
                                               Visibility="Collapsed"/>
-                                        <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True"
+                                        <ContentPresenter x:Name="HeaderContent" Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True"
                                                           VerticalAlignment="Center" Margin="6,0,10,0"/>
                                         <TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}"
                                                    VerticalAlignment="Center" Margin="0,0,8,0" Opacity="0.7"/>
@@ -151,6 +151,13 @@
                             <ControlTemplate.Triggers>
                                 <Trigger Property="Role" Value="TopLevelHeader">
                                     <Setter TargetName="Popup" Property="Placement" Value="Bottom"/>
+                                    <!-- Top-level items (File/View/Help) don't need the checkmark/gesture-text/
+                                         submenu-arrow gutters submenu items use — those were reserving ~40px of
+                                         empty width per item, spreading the menu bar out far more than normal. -->
+                                    <Setter TargetName="CheckCol" Property="Width" Value="0"/>
+                                    <Setter TargetName="GestureCol" Property="Width" Value="0"/>
+                                    <Setter TargetName="ArrowCol" Property="Width" Value="0"/>
+                                    <Setter TargetName="HeaderContent" Property="Margin" Value="0"/>
                                 </Trigger>
                                 <Trigger Property="Role" Value="SubmenuHeader">
                                     <Setter TargetName="SubmenuArrow" Property="Visibility" Value="Visible"/>
