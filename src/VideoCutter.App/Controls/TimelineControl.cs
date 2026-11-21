@@ -12,8 +12,9 @@ namespace VideoCutter.App.Controls;
 
 /// <summary>
 /// A duration-scaled strip of draggable markers. Click empty space to add a cut, drag a
-/// marker to nudge it, click a marker to select it for preview. Approved markers are green,
-/// unapproved candidates are gray, manually-added ones are blue.
+/// marker to nudge it, click a marker to select it for preview, right-click a marker to
+/// remove it. Approved markers are green, unapproved candidates are gray, manually-added ones
+/// are blue. A red line tracks the current playback position.
 /// </summary>
 public class TimelineControl : Canvas
 {
@@ -27,9 +28,21 @@ public class TimelineControl : Canvas
         set => SetValue(DurationSecondsProperty, value);
     }
 
+    public static readonly DependencyProperty PlayheadSecondsProperty =
+        DependencyProperty.Register(nameof(PlayheadSeconds), typeof(double), typeof(TimelineControl),
+            new FrameworkPropertyMetadata(0.0, (d, _) => ((TimelineControl)d).UpdatePlayhead()));
+
+    /// <summary>Current playback position; drives the red tracking line.</summary>
+    public double PlayheadSeconds
+    {
+        get => (double)GetValue(PlayheadSecondsProperty);
+        set => SetValue(PlayheadSecondsProperty, value);
+    }
+
     public event Action<double>? CandidateAddRequested;
     public event Action<CutCandidate, double>? CandidateMoved;
     public event Action<CutCandidate>? CandidateSelected;
+    public event Action<CutCandidate>? CandidateRemoveRequested;
 
     private ObservableCollection<CutCandidate>? _candidates;
     public ObservableCollection<CutCandidate>? Candidates
@@ -45,6 +58,7 @@ public class TimelineControl : Canvas
     }
 
     private readonly Rectangle _baseLine = new() { Height = 4, Fill = Brushes.Gray };
+    private readonly Rectangle _playhead = new() { Width = 2, Height = 48, Fill = Brushes.Red, IsHitTestVisible = false };
 
     public TimelineControl()
     {
@@ -52,14 +66,19 @@ public class TimelineControl : Canvas
         Background = Brushes.Transparent;
         Children.Add(_baseLine);
         SetTop(_baseLine, 26);
+        Children.Add(_playhead);
+        SetTop(_playhead, 4);
+        Panel.SetZIndex(_playhead, 100);
         MouseLeftButtonDown += OnCanvasClick;
-        SizeChanged += (_, _) => Rebuild();
+        SizeChanged += (_, _) => { Rebuild(); UpdatePlayhead(); };
     }
 
     private void OnCandidatesChanged(object? sender, NotifyCollectionChangedEventArgs e) => Rebuild();
 
     private double TimeToX(double t) => DurationSeconds <= 0 ? 0 : t / DurationSeconds * Math.Max(ActualWidth, 1);
     private double XToTime(double x) => DurationSeconds <= 0 ? 0 : x / Math.Max(ActualWidth, 1) * DurationSeconds;
+
+    private void UpdatePlayhead() => SetLeft(_playhead, TimeToX(PlayheadSeconds) - _playhead.Width / 2);
 
     private void OnCanvasClick(object sender, MouseButtonEventArgs e)
     {
@@ -75,6 +94,7 @@ public class TimelineControl : Canvas
             Children.Remove(th);
 
         _baseLine.Width = Math.Max(ActualWidth, 1);
+        UpdatePlayhead();
         if (_candidates == null) return;
 
         foreach (var c in _candidates)
@@ -86,7 +106,7 @@ public class TimelineControl : Canvas
                 Background = c.IsManual ? Brushes.DodgerBlue : c.Approved ? Brushes.LimeGreen : Brushes.DarkGray,
                 Tag = c,
                 Cursor = Cursors.SizeWE,
-                ToolTip = $"{c.TimeSeconds:F2}s — {c.SourceLabel}",
+                ToolTip = $"{c.TimeSeconds:F2}s — {c.SourceLabel} (right-click to remove)",
             };
             SetTop(thumb, 8);
             SetLeft(thumb, TimeToX(c.TimeSeconds) - thumb.Width / 2);
@@ -100,6 +120,11 @@ public class TimelineControl : Canvas
                 CandidateMoved?.Invoke(cand, XToTime(newX + th.Width / 2));
             };
             thumb.PreviewMouseLeftButtonDown += (s, _) => CandidateSelected?.Invoke((CutCandidate)((Thumb)s!).Tag);
+            thumb.MouseRightButtonUp += (s, args) =>
+            {
+                CandidateRemoveRequested?.Invoke((CutCandidate)((Thumb)s!).Tag);
+                args.Handled = true;
+            };
 
             Children.Add(thumb);
         }

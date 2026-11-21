@@ -54,7 +54,34 @@ public class DetectionService
             .OrderBy(c => c.TimeSeconds)
             .ToList();
 
-        return new DetectionOutcome(merged, warnings);
+        var spaced = ApplyMinSpacing(merged, thresholds.MinSegmentSeconds);
+
+        return new DetectionOutcome(spaced, warnings);
+    }
+
+    /// <summary>
+    /// Drops candidates that would carve out an implausibly short segment. When two candidates
+    /// land closer together than MinSegmentSeconds, the one with weaker (fewer-detector) evidence
+    /// is dropped rather than both being shown — real ad spots don't run that short.
+    /// </summary>
+    private static List<CutCandidate> ApplyMinSpacing(List<CutCandidate> sorted, double minSpacing)
+    {
+        if (sorted.Count == 0) return sorted;
+        var result = new List<CutCandidate> { sorted[0] };
+        foreach (var c in sorted.Skip(1))
+        {
+            var last = result[^1];
+            if (c.TimeSeconds - last.TimeSeconds >= minSpacing)
+            {
+                result.Add(c);
+            }
+            else if (c.Sources.Distinct().Count() > last.Sources.Distinct().Count())
+            {
+                result[^1] = c; // stronger evidence close by — replace, don't pile on
+            }
+            // else: c is weaker (or equal) and too close to the kept candidate — drop it
+        }
+        return result;
     }
 
     private static List<CutCandidate> MergeCandidates(List<(double Time, CandidateSource Source)> tagged, double window)

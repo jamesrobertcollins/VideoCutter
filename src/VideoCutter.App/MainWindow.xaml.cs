@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     private LibVLC? _libVlc;
     private MediaPlayer? _player;
     private readonly DispatcherTimer _autosaveTimer = new() { Interval = TimeSpan.FromSeconds(5) };
+    private bool _suppressScrubberSeek;
 
     public MainWindow()
     {
@@ -26,13 +27,17 @@ public partial class MainWindow : Window
         _libVlc = new LibVLC();
         _player = new MediaPlayer(_libVlc);
         VideoViewer.MediaPlayer = _player;
+        _player.TimeChanged += Player_TimeChanged;
 
         Timeline.Candidates = _vm.Candidates;
         Timeline.CandidateAddRequested += t => _vm.AddCandidate(t);
         Timeline.CandidateMoved += (c, t) => _vm.MoveCandidate(c, t);
         Timeline.CandidateSelected += c => { _vm.SelectedCandidate = c; PlayAround(c); };
+        Timeline.CandidateRemoveRequested += c => _vm.RemoveCandidate(c);
 
         _vm.CandidatesReset += () => Dispatcher.Invoke(() => Timeline.Rebuild());
+        _vm.DetectionFinished += summary => Dispatcher.Invoke(() =>
+            MessageBox.Show(summary, "VideoCutter — Detection Finished", MessageBoxButton.OK, MessageBoxImage.Information));
 
         _autosaveTimer.Tick += async (_, _) =>
         {
@@ -47,6 +52,34 @@ public partial class MainWindow : Window
             _libVlc?.Dispose();
         };
     }
+
+    private void Player_TimeChanged(object? sender, MediaPlayerTimeChangedEventArgs e)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            var seconds = e.Time / 1000.0;
+            _suppressScrubberSeek = true;
+            try
+            {
+                _vm.CurrentTimeSeconds = seconds;
+                if (seconds >= Scrubber.Minimum && seconds <= Scrubber.Maximum)
+                    Scrubber.Value = seconds;
+            }
+            finally
+            {
+                _suppressScrubberSeek = false;
+            }
+        });
+    }
+
+    private void Scrubber_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_suppressScrubberSeek || _player == null) return;
+        _player.Time = (long)(e.NewValue * 1000);
+        _vm.CurrentTimeSeconds = e.NewValue;
+    }
+
+    private void AddCutHere_Click(object sender, RoutedEventArgs e) => _vm.AddCandidate(_vm.CurrentTimeSeconds);
 
     private async void OpenButton_Click(object sender, RoutedEventArgs e)
     {

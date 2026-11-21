@@ -48,6 +48,10 @@ public class MainViewModel : ObservableObject
     private CutCandidate? _selectedCandidate;
     public CutCandidate? SelectedCandidate { get => _selectedCandidate; set => SetProperty(ref _selectedCandidate, value); }
 
+    private double _currentTimeSeconds;
+    /// <summary>Current playhead position, driven by the scrubber/player — not persisted.</summary>
+    public double CurrentTimeSeconds { get => _currentTimeSeconds; set => SetProperty(ref _currentTimeSeconds, value); }
+
     public ObservableCollection<CutCandidate> Candidates { get; } = new();
     public ObservableCollection<string> Warnings { get; } = new();
     public ObservableCollection<ClipVerification> VerificationResults { get; } = new();
@@ -57,6 +61,9 @@ public class MainViewModel : ObservableObject
     public IAsyncRelayCommand ExportCommand { get; }
 
     public event Action? CandidatesReset;
+
+    /// <summary>Fired once detection finishes, so the view can pop up a "you can interact now" notice.</summary>
+    public event Action<string>? DetectionFinished;
 
     public MainViewModel()
     {
@@ -137,12 +144,14 @@ public class MainViewModel : ObservableObject
                 Candidates.Add(c);
 
             CandidatesReset?.Invoke();
-            StatusMessage = $"Detected {Candidates.Count} candidate cut points ({Candidates.Count(c => c.Approved)} pre-approved).";
+            var summary = $"Detection finished: {Candidates.Count} candidate cut points found, {Candidates.Count(c => c.Approved)} pre-approved.";
+            StatusMessage = summary;
 
             await GenerateThumbnailsAsync();
             await AutosaveAsync();
             RedetectCommand.NotifyCanExecuteChanged();
             ExportCommand.NotifyCanExecuteChanged();
+            DetectionFinished?.Invoke(summary);
         }
         finally
         {

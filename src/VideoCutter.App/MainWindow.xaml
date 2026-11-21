@@ -94,12 +94,19 @@
                     <Button Content="Play/Pause" Padding="8,4" Click="PlayPause_Click"/>
                     <Button Content="Stop" Padding="8,4" Margin="8,0,0,0" Click="StopPreview_Click"/>
                 </StackPanel>
+                <Slider x:Name="Scrubber" DockPanel.Dock="Top" Margin="0,8,0,0" Minimum="0"
+                        Maximum="{Binding DurationSeconds}" ValueChanged="Scrubber_ValueChanged"
+                        IsMoveToPointEnabled="True"/>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,4,0,0">
+                    <TextBlock Text="{Binding CurrentTimeSeconds, Converter={StaticResource Timecode}}" FontWeight="Bold" VerticalAlignment="Center" Width="90"/>
+                    <Button Content="Add Cut Here" Padding="8,4" Margin="8,0,0,0" Click="AddCutHere_Click"/>
+                </StackPanel>
             </DockPanel>
         </Grid>
 
         <!-- Timeline -->
         <Border Grid.Row="3" BorderBrush="#CCC" BorderThickness="1" Margin="0,8,0,0" Padding="4">
-            <ctrl:TimelineControl x:Name="Timeline" DurationSeconds="{Binding DurationSeconds}"/>
+            <ctrl:TimelineControl x:Name="Timeline" DurationSeconds="{Binding DurationSeconds}" PlayheadSeconds="{Binding CurrentTimeSeconds}"/>
         </Border>
 
         <!-- Advanced panel -->
@@ -124,6 +131,10 @@
                 <StackPanel Margin="0,0,16,0">
                     <TextBlock Text="Scene threshold"/>
                     <TextBox Width="70" Text="{Binding Thresholds.SceneThreshold, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,16,0">
+                    <TextBlock Text="Min segment length (s)"/>
+                    <TextBox Width="70" Text="{Binding Thresholds.MinSegmentSeconds, UpdateSourceTrigger=PropertyChanged}"/>
                 </StackPanel>
                 <Button Content="Re-run with these settings" Padding="10,4" VerticalAlignment="Bottom" Click="RedetectButton_Click"/>
             </StackPanel>
