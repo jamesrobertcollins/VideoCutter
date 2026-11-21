@@ -13,7 +13,17 @@ public class ThumbnailService
         // can be mid-transition; the frame just after it is a stable preview).
         var grabAt = atSeconds + 0.8;
         var args = $"-y -ss {grabAt.ToString("0.###", CultureInfo.InvariantCulture)} -i \"{sourcePath}\" -frames:v 1 -vf scale=320:-1 \"{outPath}\"";
-        await ProcessRunner.RunAsync(FfmpegLocator.FfmpegPath, args, ct);
-        return outPath;
+        try
+        {
+            var (_, stderr, exitCode) = await ProcessRunner.RunAsync(FfmpegLocator.FfmpegPath, args, ct);
+            if (exitCode != 0)
+                Log.Warn($"Thumbnail grab exited {exitCode} at {atSeconds:F2}s for '{sourcePath}': {stderr}");
+            return outPath;
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Thumbnail grab threw at {atSeconds:F2}s for '{sourcePath}'", ex);
+            throw;
+        }
     }
 }

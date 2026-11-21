@@ -75,6 +75,25 @@ the threshold is too low. Changes from the original pass:
 
 All of these are exposed in the Advanced panel if a particular source needs different values.
 
+## Logging
+
+Every session writes to `%LOCALAPPDATA%\VideoCutter\logs\videocutter-{date}.log` — probing,
+every detector pass and hit count, export/verification steps, every ffmpeg/ffprobe command
+line, and the full exception + stack trace for anything that goes wrong. The toolbar's
+**View Log** button opens today's file directly in Explorer.
+
+The app is also hardened against the exception propagating into a crash in the first place:
+- `MainViewModel`'s file-open/detect/export methods catch internally, log, and surface a
+  `Faulted` event the window turns into an error dialog — the app stays open and usable.
+- A corrupted or schema-mismatched `.videocutter.json` (e.g. left over from a crash mid-write)
+  is logged and treated as absent, falling back to a fresh detection pass, instead of throwing.
+- ffmpeg/ffprobe failing to launch (most likely cause: not actually bundled — see "First-time
+  setup" above) raises a clear "could not launch ffmpeg, check PATH/bundling" error instead of
+  a bare Win32 "cannot find the file specified".
+- App-level `DispatcherUnhandledException` / `AppDomain.UnhandledException` /
+  `TaskScheduler.UnobservedTaskException` handlers log anything that slips past the above, so a
+  crash always leaves a log entry even if the process still has to go down.
+
 ## Project layout
 
 - `src/VideoCutter.Core` — detection/export/verification engine (no UI dependencies,

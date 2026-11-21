@@ -1,3 +1,4 @@
+using System.Linq;
 using VideoCutter.Core.Models;
 
 namespace VideoCutter.Core.Services;
@@ -14,6 +15,7 @@ public class VerificationService
         double sourceDuration,
         CancellationToken ct = default)
     {
+        Log.Info($"Verifying {plans.Count} clip(s) in '{outputDir}'");
         var results = new List<ClipVerification>();
         double sumDuration = 0;
 
@@ -26,6 +28,7 @@ public class VerificationService
             {
                 v.Passed = false;
                 v.Message = "File missing or zero-length";
+                Log.Warn($"Verification failed for '{plan.FileName}': {v.Message}");
                 results.Add(v);
                 continue;
             }
@@ -41,19 +44,18 @@ public class VerificationService
 
             v.Passed = issues.Count == 0;
             v.Message = issues.Count == 0 ? "OK" : string.Join("; ", issues);
+            if (!v.Passed) Log.Warn($"Verification failed for '{plan.FileName}': {v.Message}");
             results.Add(v);
         }
 
         if (Math.Abs(sumDuration - sourceDuration) > 1.0)
         {
-            results.Add(new ClipVerification
-            {
-                FileName = "(total)",
-                Passed = false,
-                Message = $"Sum of clip durations {sumDuration:F2}s differs from source {sourceDuration:F2}s by more than 1s",
-            });
+            var msg = $"Sum of clip durations {sumDuration:F2}s differs from source {sourceDuration:F2}s by more than 1s";
+            Log.Warn(msg);
+            results.Add(new ClipVerification { FileName = "(total)", Passed = false, Message = msg });
         }
 
+        Log.Info($"Verification finished: {results.Count(r => r.Passed)}/{plans.Count} clip(s) passed.");
         return results;
     }
 }

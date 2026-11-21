@@ -29,6 +29,7 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
             <Button x:Name="OpenButton" Content="Open Source Video..." Padding="10,4" Click="OpenButton_Click"/>
             <Button x:Name="RedetectButton" Content="Re-run Detection" Padding="10,4" Margin="8,0,0,0" Click="RedetectButton_Click"/>
+            <Button Content="View Log" Padding="10,4" Margin="8,0,0,0" Click="ViewLog_Click"/>
             <TextBlock Text="{Binding SourcePath, StringFormat='Source: {0}'}" VerticalAlignment="Center" Margin="16,0,0,0" FontWeight="Bold"/>
             <TextBlock Text="{Binding DurationSeconds, StringFormat='Duration: {0:F1}s'}" Margin="16,0,0,0" VerticalAlignment="Center"/>
         </StackPanel>

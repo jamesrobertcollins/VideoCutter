@@ -24,39 +24,52 @@ public class DetectionService
         IProgress<string>? progress = null,
         CancellationToken ct = default)
     {
-        var warnings = new List<string>();
-        var tagged = new List<(double Time, CandidateSource Source)>();
-
-        progress?.Report("Detecting black frames...");
-        var blackArgs = $"-an -vf \"blackdetect=d={F(thresholds.BlackMinDuration)}:pic_th={F(thresholds.BlackPictureThreshold)}\"";
-        foreach (var t in await RunDetectAsync(sourcePath, blackArgs, BlackRegex, ct))
-            tagged.Add((t, CandidateSource.Black));
-
-        if (sourceHasAudio)
+        Log.Info($"Detection starting for '{sourcePath}' duration={durationSeconds:F2}s hasAudio={sourceHasAudio}");
+        try
         {
-            progress?.Report("Detecting silence...");
-            var silenceArgs = $"-vn -af \"silencedetect=n={F(thresholds.SilenceThresholdDb)}dB:d={F(thresholds.SilenceMinDuration)}\"";
-            foreach (var t in await RunDetectAsync(sourcePath, silenceArgs, SilenceStartRegex, ct))
-                tagged.Add((t, CandidateSource.Silence));
+            var warnings = new List<string>();
+            var tagged = new List<(double Time, CandidateSource Source)>();
+
+            progress?.Report("Detecting black frames...");
+            var blackArgs = $"-an -vf \"blackdetect=d={F(thresholds.BlackMinDuration)}:pic_th={F(thresholds.BlackPictureThreshold)}\"";
+            var blackHits = await RunDetectAsync(sourcePath, blackArgs, BlackRegex, ct);
+            Log.Info($"  black: {blackHits.Count} hit(s)");
+            foreach (var t in blackHits) tagged.Add((t, CandidateSource.Black));
+
+            if (sourceHasAudio)
+            {
+                progress?.Report("Detecting silence...");
+                var silenceArgs = $"-vn -af \"silencedetect=n={F(thresholds.SilenceThresholdDb)}dB:d={F(thresholds.SilenceMinDuration)}\"";
+                var silenceHits = await RunDetectAsync(sourcePath, silenceArgs, SilenceStartRegex, ct);
+                Log.Info($"  silence: {silenceHits.Count} hit(s)");
+                foreach (var t in silenceHits) tagged.Add((t, CandidateSource.Silence));
+            }
+            else
+            {
+                warnings.Add("Source has no audio track — silence detection skipped; relying on black-frame and scene-change detection only.");
+            }
+
+            progress?.Report("Detecting scene changes...");
+            var sceneArgs = $"-an -vf \"select='gt(scene,{F(thresholds.SceneThreshold)})',showinfo\"";
+            var sceneHits = await RunDetectAsync(sourcePath, sceneArgs, SceneRegex, ct);
+            Log.Info($"  scene: {sceneHits.Count} hit(s)");
+            foreach (var t in sceneHits) tagged.Add((t, CandidateSource.Scene));
+
+            var merged = MergeCandidates(tagged, thresholds.MergeWindowSeconds)
+                .Where(c => durationSeconds - c.TimeSeconds > thresholds.EndTrimSeconds)
+                .OrderBy(c => c.TimeSeconds)
+                .ToList();
+
+            var spaced = ApplyMinSpacing(merged, thresholds.MinSegmentSeconds);
+            Log.Info($"Detection finished: {tagged.Count} raw hits -> {merged.Count} merged -> {spaced.Count} after min-spacing.");
+
+            return new DetectionOutcome(spaced, warnings);
         }
-        else
+        catch (Exception ex)
         {
-            warnings.Add("Source has no audio track — silence detection skipped; relying on black-frame and scene-change detection only.");
+            Log.Error($"Detection threw for '{sourcePath}'", ex);
+            throw;
         }
-
-        progress?.Report("Detecting scene changes...");
-        var sceneArgs = $"-an -vf \"select='gt(scene,{F(thresholds.SceneThreshold)})',showinfo\"";
-        foreach (var t in await RunDetectAsync(sourcePath, sceneArgs, SceneRegex, ct))
-            tagged.Add((t, CandidateSource.Scene));
-
-        var merged = MergeCandidates(tagged, thresholds.MergeWindowSeconds)
-            .Where(c => durationSeconds - c.TimeSeconds > thresholds.EndTrimSeconds)
-            .OrderBy(c => c.TimeSeconds)
-            .ToList();
-
-        var spaced = ApplyMinSpacing(merged, thresholds.MinSegmentSeconds);
-
-        return new DetectionOutcome(spaced, warnings);
     }
 
     /// <summary>

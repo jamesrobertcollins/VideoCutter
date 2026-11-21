@@ -59,50 +59,61 @@ public class ExportService
         IProgress<string>? progress = null,
         CancellationToken ct = default)
     {
-        var outputDir = Path.GetDirectoryName(Path.GetFullPath(sourcePath))!;
-        Directory.CreateDirectory(outputDir);
-
-        if (mode == ExportMode.StreamCopy)
-        {
-            foreach (var plan in plans)
-            {
-                ct.ThrowIfCancellationRequested();
-                progress?.Report($"Exporting {plan.FileName} (stream copy)...");
-                var outPath = Path.Combine(outputDir, plan.FileName);
-                var args = $"-y -ss {F(plan.StartSeconds)} -i \"{sourcePath}\" -t {F(plan.DurationSeconds)} -c copy \"{outPath}\"";
-                await RunOrThrow(args, ct);
-            }
-            return;
-        }
-
-        // Re-encode: single ffmpeg segment pass is far faster than N re-encodes, so we do the
-        // whole file at once with ffmpeg's own sequential naming, then rename to our plan.
-        progress?.Report("Re-encoding and segmenting (this can take a while)...");
-        var tempDir = Path.Combine(outputDir, $".videocutter_tmp_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
+        Log.Info($"Export starting for '{sourcePath}': {plans.Count} segment(s), mode={mode}");
         try
         {
-            var ext = Path.GetExtension(sourcePath);
-            var pattern = Path.Combine(tempDir, "part_%03d" + ext);
-            var segTimes = string.Join(",", plans.Skip(1).Select(p => F(p.StartSeconds)));
-            var args = $"-y -i \"{sourcePath}\" -map 0:v:0 -map \"0:a:0?\" " +
-                       $"-c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -c:a aac -b:a 192k " +
-                       $"-f segment -segment_times {segTimes} -reset_timestamps 1 \"{pattern}\"";
-            await RunOrThrow(args, ct);
+            var outputDir = Path.GetDirectoryName(Path.GetFullPath(sourcePath))!;
+            Directory.CreateDirectory(outputDir);
 
-            for (int i = 0; i < plans.Count; i++)
+            if (mode == ExportMode.StreamCopy)
             {
-                var src = Path.Combine(tempDir, $"part_{i:D3}{ext}");
-                var dst = Path.Combine(outputDir, plans[i].FileName);
-                if (File.Exists(src))
-                    File.Move(src, dst, overwrite: false);
-                else
-                    throw new InvalidOperationException($"Expected segment output '{src}' was not produced by ffmpeg.");
+                foreach (var plan in plans)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    progress?.Report($"Exporting {plan.FileName} (stream copy)...");
+                    var outPath = Path.Combine(outputDir, plan.FileName);
+                    var args = $"-y -ss {F(plan.StartSeconds)} -i \"{sourcePath}\" -t {F(plan.DurationSeconds)} -c copy \"{outPath}\"";
+                    await RunOrThrow(args, ct);
+                }
+                Log.Info($"Export finished (stream copy): {plans.Count} clip(s) written to '{outputDir}'.");
+                return;
+            }
+
+            // Re-encode: single ffmpeg segment pass is far faster than N re-encodes, so we do the
+            // whole file at once with ffmpeg's own sequential naming, then rename to our plan.
+            progress?.Report("Re-encoding and segmenting (this can take a while)...");
+            var tempDir = Path.Combine(outputDir, $".videocutter_tmp_{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                var ext = Path.GetExtension(sourcePath);
+                var pattern = Path.Combine(tempDir, "part_%03d" + ext);
+                var segTimes = string.Join(",", plans.Skip(1).Select(p => F(p.StartSeconds)));
+                var args = $"-y -i \"{sourcePath}\" -map 0:v:0 -map \"0:a:0?\" " +
+                           $"-c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -c:a aac -b:a 192k " +
+                           $"-f segment -segment_times {segTimes} -reset_timestamps 1 \"{pattern}\"";
+                await RunOrThrow(args, ct);
+
+                for (int i = 0; i < plans.Count; i++)
+                {
+                    var src = Path.Combine(tempDir, $"part_{i:D3}{ext}");
+                    var dst = Path.Combine(outputDir, plans[i].FileName);
+                    if (File.Exists(src))
+                        File.Move(src, dst, overwrite: false);
+                    else
+                        throw new InvalidOperationException($"Expected segment output '{src}' was not produced by ffmpeg.");
+                }
+                Log.Info($"Export finished (re-encode): {plans.Count} clip(s) written to '{outputDir}'.");
+            }
+            finally
+            {
+                try { Directory.Delete(tempDir, true); } catch { /* best effort cleanup */ }
             }
         }
-        finally
+        catch (Exception ex)
         {
-            try { Directory.Delete(tempDir, true); } catch { /* best effort cleanup */ }
+            Log.Error($"Export threw for '{sourcePath}'", ex);
+            throw;
         }
     }
 
@@ -110,7 +121,10 @@ public class ExportService
     {
         var (_, stderr, exitCode) = await ProcessRunner.RunAsync(FfmpegLocator.FfmpegPath, args, ct);
         if (exitCode != 0)
+        {
+            Log.Error($"ffmpeg export failed (exit {exitCode}): {Tail(stderr, 2000)}");
             throw new InvalidOperationException($"ffmpeg failed (exit {exitCode}): {Tail(stderr, 2000)}");
+        }
     }
 
     private static string Tail(string s, int n) => s.Length <= n ? s : s[^n..];

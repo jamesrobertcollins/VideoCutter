@@ -65,6 +65,19 @@ public class MainViewModel : ObservableObject
     /// <summary>Fired once detection finishes, so the view can pop up a "you can interact now" notice.</summary>
     public event Action<string>? DetectionFinished;
 
+    /// <summary>
+    /// Fired when an operation fails. The view shows this instead of the exception taking down
+    /// the whole app — every risky method below catches internally and routes here.
+    /// </summary>
+    public event Action<string>? Faulted;
+
+    private void ReportFault(string context, Exception ex)
+    {
+        Log.Error(context, ex);
+        StatusMessage = $"Error: {context.ToLowerInvariant()}. See log for details.";
+        Faulted?.Invoke($"{context}\n\n{ex.GetType().Name}: {ex.Message}\n\nFull details were written to:\n{Log.LogPath}");
+    }
+
     public MainViewModel()
     {
         OpenFileCommand = new AsyncRelayCommand<string>(OpenFileAsync!);
@@ -77,6 +90,7 @@ public class MainViewModel : ObservableObject
         IsBusy = true;
         try
         {
+            Log.Info($"OpenFileAsync: '{path}'");
             SourcePath = path;
             ThumbnailDir = Path.Combine(Path.GetTempPath(), "VideoCutter", Path.GetFileNameWithoutExtension(path));
             Warnings.Clear();
@@ -90,6 +104,7 @@ public class MainViewModel : ObservableObject
             if (probe.DurationSeconds <= 0)
             {
                 StatusMessage = "Could not read a duration for this file — is it a valid video?";
+                Log.Warn($"OpenFileAsync: zero/invalid duration probed for '{path}'");
                 return;
             }
 
@@ -109,6 +124,10 @@ public class MainViewModel : ObservableObject
             }
 
             await RunDetectionAsync();
+        }
+        catch (Exception ex)
+        {
+            ReportFault($"Opening '{Path.GetFileName(path)}' failed", ex);
         }
         finally
         {
@@ -153,6 +172,10 @@ public class MainViewModel : ObservableObject
             ExportCommand.NotifyCanExecuteChanged();
             DetectionFinished?.Invoke(summary);
         }
+        catch (Exception ex)
+        {
+            ReportFault("Detection failed", ex);
+        }
         finally
         {
             IsBusy = false;
@@ -171,9 +194,10 @@ public class MainViewModel : ObservableObject
             {
                 c.ThumbnailPath = await Thumbnails.GenerateAsync(SourcePath, c.TimeSeconds, ThumbnailDir, $"cand_{i:D3}");
             }
-            catch
+            catch (Exception ex)
             {
                 // Thumbnail failures (e.g. candidate too close to EOF) are non-fatal; the row just shows no image.
+                Log.Warn($"Thumbnail generation failed for candidate at {c.TimeSeconds:F2}s: {ex.Message}");
             }
         }
     }
@@ -250,6 +274,10 @@ public class MainViewModel : ObservableObject
             StatusMessage = failCount == 0
                 ? $"Exported and verified {plans.Count} clips — all passed."
                 : $"Exported {plans.Count} clips — {failCount} verification issue(s), see below.";
+        }
+        catch (Exception ex)
+        {
+            ReportFault("Export failed", ex);
         }
         finally
         {
