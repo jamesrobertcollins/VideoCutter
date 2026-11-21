@@ -130,7 +130,7 @@ public static class ThemeManager
         },
         [AppTheme.Win95] = new ThemeDefinition
         {
-            DisplayName = "Win95/98",
+            DisplayName = "Win9x",
             WindowBackground = Color.FromRgb(0xC0, 0xC0, 0xC0),
             PanelBackground = Color.FromRgb(0xC0, 0xC0, 0xC0),
             Foreground = Colors.Black,

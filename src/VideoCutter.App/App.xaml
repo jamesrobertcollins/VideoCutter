@@ -112,12 +112,67 @@
                 <Setter Property="Background" Value="{DynamicResource AppPanelBackgroundBrush}"/>
                 <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
                 <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
-                <Style.Triggers>
-                    <Trigger Property="IsHighlighted" Value="True">
-                        <Setter Property="Background" Value="{DynamicResource AppAccentBrush}"/>
-                        <Setter Property="Foreground" Value="White"/>
-                    </Trigger>
-                </Style.Triggers>
+                <Setter Property="Padding" Value="8,4"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="MenuItem">
+                            <Grid x:Name="Root" SnapsToDevicePixels="True">
+                                <Border x:Name="Bg" Background="{TemplateBinding Background}" BorderThickness="0">
+                                    <Grid Margin="{TemplateBinding Padding}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="18"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="14"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Path x:Name="CheckMark" Grid.Column="0" Data="M0,4 L3,7 L8,0"
+                                              Stroke="{TemplateBinding Foreground}" StrokeThickness="1.6"
+                                              Width="8" Height="8" Stretch="Uniform" VerticalAlignment="Center"
+                                              Visibility="Collapsed"/>
+                                        <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True"
+                                                          VerticalAlignment="Center" Margin="6,0,10,0"/>
+                                        <TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}"
+                                                   VerticalAlignment="Center" Margin="0,0,8,0" Opacity="0.7"/>
+                                        <Path x:Name="SubmenuArrow" Grid.Column="3" Data="M0,0 L4,4 L0,8"
+                                              Fill="{TemplateBinding Foreground}" Width="5" Height="8" Stretch="Uniform"
+                                              VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed"/>
+                                    </Grid>
+                                </Border>
+                                <Popup x:Name="Popup" Placement="Right" AllowsTransparency="True" Focusable="False"
+                                       PopupAnimation="Fade" IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
+                                    <Border Background="{DynamicResource AppPanelBackgroundBrush}"
+                                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                                        <ScrollViewer CanContentScroll="True" SnapsToDevicePixels="True">
+                                            <ItemsPresenter Margin="2" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="Role" Value="TopLevelHeader">
+                                    <Setter TargetName="Popup" Property="Placement" Value="Bottom"/>
+                                </Trigger>
+                                <Trigger Property="Role" Value="SubmenuHeader">
+                                    <Setter TargetName="SubmenuArrow" Property="Visibility" Value="Visible"/>
+                                </Trigger>
+                                <MultiTrigger>
+                                    <MultiTrigger.Conditions>
+                                        <Condition Property="IsCheckable" Value="True"/>
+                                        <Condition Property="IsChecked" Value="True"/>
+                                    </MultiTrigger.Conditions>
+                                    <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                                </MultiTrigger>
+                                <Trigger Property="IsHighlighted" Value="True">
+                                    <Setter TargetName="Bg" Property="Background" Value="{DynamicResource AppAccentBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.5"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
             <Style TargetType="Separator">
                 <Setter Property="Background" Value="{DynamicResource AppBorderBrush}"/>
@@ -128,6 +183,55 @@
             </Style>
             <Style TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+            </Style>
+            <Style TargetType="ProgressBar">
+                <Setter Property="Background" Value="{DynamicResource AppControlBackgroundBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Foreground" Value="{DynamicResource AppAccentBrush}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ProgressBar">
+                            <Grid>
+                                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"/>
+                                <Grid x:Name="PART_Track" Margin="1" ClipToBounds="True">
+                                    <!-- Determinate fill: WPF auto-sizes an element literally named
+                                         PART_Indicator against PART_Track when both are present. -->
+                                    <Border x:Name="PART_Indicator" HorizontalAlignment="Left"
+                                            Background="{TemplateBinding Foreground}"/>
+                                    <Canvas x:Name="IndeterminateRoot" Visibility="Collapsed" ClipToBounds="True">
+                                        <Rectangle x:Name="IndeterminateBlock" Width="50"
+                                                   Fill="{TemplateBinding Foreground}" Canvas.Left="-50">
+                                            <Rectangle.Height>
+                                                <Binding ElementName="PART_Track" Path="ActualHeight"/>
+                                            </Rectangle.Height>
+                                        </Rectangle>
+                                    </Canvas>
+                                </Grid>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsIndeterminate" Value="True">
+                                    <Setter TargetName="PART_Indicator" Property="Visibility" Value="Collapsed"/>
+                                    <Setter TargetName="IndeterminateRoot" Property="Visibility" Value="Visible"/>
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard Name="IndeterminateStoryboard">
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="IndeterminateBlock"
+                                                                 Storyboard.TargetProperty="(Canvas.Left)"
+                                                                 From="-50" To="220" Duration="0:0:1.2"
+                                                                 RepeatBehavior="Forever"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                    <Trigger.ExitActions>
+                                        <StopStoryboard BeginStoryboardName="IndeterminateStoryboard"/>
+                                    </Trigger.ExitActions>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
         </ResourceDictionary>
     </Application.Resources>

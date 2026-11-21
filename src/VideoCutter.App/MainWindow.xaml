@@ -23,6 +23,11 @@
 
         <DockPanel>
             <Menu DockPanel.Dock="Top">
+                <MenuItem Header="_File">
+                    <MenuItem Header="_Open Source Video..." Click="OpenButton_Click"/>
+                    <Separator/>
+                    <MenuItem Header="E_xit" Click="ExitMenuItem_Click"/>
+                </MenuItem>
                 <MenuItem Header="_View">
                     <MenuItem Header="_Layout">
                         <MenuItem x:Name="LayoutRightMenuItem" Header="Video on Right" IsCheckable="True" IsChecked="True" Tag="Right" Click="LayoutMenuItem_Click"/>
@@ -134,7 +139,7 @@
                     <Button Content="Add Cut Here" Padding="8,4" Margin="8,0,0,0" Click="AddCutHere_Click"/>
                 </StackPanel>
                 <TextBlock DockPanel.Dock="Top" Margin="0,6,0,0" FontSize="11" Foreground="Gray" TextWrapping="Wrap"
-                           Text="Keyboard: ← / → seek 1s, Ctrl+← / → seek 5s, Alt+← / → seek 10s (while not typing in a text box)."/>
+                           Text="Keyboard: ← / → seek 1s, Ctrl+← / → seek 5s, Alt+← / → seek 10s."/>
             </DockPanel>
         </Grid>
 

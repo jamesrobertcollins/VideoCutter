@@ -210,6 +210,8 @@ public partial class MainWindow : Window
         about.ShowDialog();
     }
 
+    private void ExitMenuItem_Click(object sender, RoutedEventArgs e) => Close();
+
     private void Player_TimeChanged(object? sender, MediaPlayerTimeChangedEventArgs e)
     {
         Dispatcher.BeginInvoke(() =>
