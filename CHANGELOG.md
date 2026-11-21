@@ -8,6 +8,14 @@ file groups changes by *topic* across commits for human readability, not 1:1 by 
 
 ## Unreleased / in progress
 
+(nothing yet)
+
+## v1.0.21 — 2026-11-21
+
+Second published Windows binary release:
+[GitHub Releases](https://github.com/jamesrobertcollins/VideoCutter/releases/tag/v1.0.21) —
+self-contained win-x64 build (~260MB).
+
 - **File > Close**: clears the current review back to the empty state (flushes one last
   autosave first, doesn't delete the project file). Disabled when no file is open; declines
   with a status message rather than tearing state out from under a running detection/export.
