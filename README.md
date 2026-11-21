@@ -79,8 +79,8 @@ All of these are exposed in the Advanced panel if a particular source needs diff
 
 Every session writes to `%LOCALAPPDATA%\VideoCutter\logs\videocutter-{date}.log` — probing,
 every detector pass and hit count, export/verification steps, every ffmpeg/ffprobe command
-line, and the full exception + stack trace for anything that goes wrong. The toolbar's
-**View Log** button opens today's file directly in Explorer.
+line, and the full exception + stack trace for anything that goes wrong. **View > View Log**
+opens today's file directly in Explorer.
 
 The app is also hardened against the exception propagating into a crash in the first place:
 - `MainViewModel`'s file-open/detect/export methods catch internally, log, and surface a
@@ -93,6 +93,36 @@ The app is also hardened against the exception propagating into a crash in the f
 - App-level `DispatcherUnhandledException` / `AppDomain.UnhandledException` /
   `TaskScheduler.UnobservedTaskException` handlers log anything that slips past the above, so a
   crash always leaves a log entry even if the process still has to go down.
+
+## Branding, themes & UI
+
+- **About / license**: Help > About VideoCutter shows the version, credits, and the MIT
+  license (also viewable directly via its **View License** button, or `LICENSE` at the repo root).
+- **Themes**: View > Theme switches between Light, Dark, Cyberpunk, Unix, Pink, Film (filmstrip
+  background art), and Win95/98 — each recolors the whole UI *and* the real Windows titlebar via
+  DWM (`DWMWA_CAPTION_COLOR`/`DWMWA_USE_IMMERSIVE_DARK_MODE`, Windows 11 22000+; older Windows
+  just keeps the default chrome). The choice persists to
+  `%LOCALAPPDATA%\VideoCutter\settings.json` across restarts. Every control (Button, TextBox,
+  ComboBox, Menu, etc.) uses a fully custom-templated style in `App.xaml` so theme colors
+  actually apply — the default WPF chrome for ComboBox/Menu otherwise ignores simple
+  Background/Foreground setters and stays illegible on dark themes.
+- **Layout**: View > Layout toggles the review pane between video-on-the-right (default; the
+  video gets the larger 3-of-5 share, candidate list the narrower 2-of-5) and video-on-top with
+  the candidate list filling the width below it. One `Grid` is reused for both arrangements —
+  `MainWindow.xaml.cs`'s `ApplyReviewLayout` just moves the same controls between cells.
+- **Playback**: a Speed dropdown (0.5x-4x) next to Play/Pause/Stop controls `MediaPlayer.SetRate`
+  for faster review. Keyboard seeking works whenever focus isn't in a text box: Left/Right = 1s,
+  Ctrl+Left/Right = 5s, Alt+Left/Right = 10s.
+- **Thumbnails** render at 160x90 in the list (generated at 480px source width for crispness).
+
+## Versioning
+
+`Directory.Build.props` holds `VersionMajor`/`VersionMinor` (currently 1.0) — edit these by hand,
+and bump `VersionMajor` **only** on an explicit "major overhaul" instruction. The patch number is
+*not* manual: a build target in `VideoCutter.App.csproj` shells out to
+`git rev-list --count HEAD` and uses that commit count as the patch number automatically, so the
+version visible in About / the exe's file properties always advances with every commit with zero
+upkeep (falls back to `0` if git/the repo isn't available, e.g. a zip export with no `.git`).
 
 ## Project layout
 
