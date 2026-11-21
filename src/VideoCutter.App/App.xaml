@@ -77,7 +77,8 @@
                                     <Border Background="{DynamicResource AppControlBackgroundBrush}"
                                             BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
                                             MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" MaxHeight="300">
-                                        <ScrollViewer SnapsToDevicePixels="True">
+                                        <ScrollViewer SnapsToDevicePixels="True"
+                                                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                             <ItemsPresenter/>
                                         </ScrollViewer>
                                     </Border>
@@ -142,7 +143,8 @@
                                        PopupAnimation="Fade" IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
                                     <Border Background="{DynamicResource AppPanelBackgroundBrush}"
                                             BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
-                                        <ScrollViewer CanContentScroll="True" SnapsToDevicePixels="True">
+                                        <ScrollViewer CanContentScroll="True" SnapsToDevicePixels="True"
+                                                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                             <ItemsPresenter Margin="2" KeyboardNavigation.DirectionalNavigation="Cycle"/>
                                         </ScrollViewer>
                                     </Border>
