@@ -8,6 +8,9 @@ file groups changes by *topic* across commits for human readability, not 1:1 by 
 
 ## Unreleased / in progress
 
+- **File > Close**: clears the current review back to the empty state (flushes one last
+  autosave first, doesn't delete the project file). Disabled when no file is open; declines
+  with a status message rather than tearing state out from under a running detection/export.
 - **Fixed**: opening a different source file while another was already loaded leaked that
   previous file's manually-added candidates into the new file's candidate list (tagged
   "Manual", clustered invisibly at the very start of the timeline — looked like detected

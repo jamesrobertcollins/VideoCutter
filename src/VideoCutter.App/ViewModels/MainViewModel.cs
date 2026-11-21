@@ -85,6 +85,7 @@ public class MainViewModel : ObservableObject
     public IAsyncRelayCommand<string> OpenFileCommand { get; }
     public IAsyncRelayCommand RedetectCommand { get; }
     public IAsyncRelayCommand ExportCommand { get; }
+    public IAsyncRelayCommand CloseFileCommand { get; }
 
     public event Action? CandidatesReset;
 
@@ -93,6 +94,9 @@ public class MainViewModel : ObservableObject
 
     /// <summary>Fired once export+verification finishes, so the view can show the results popup.</summary>
     public event Action<string>? ExportFinished;
+
+    /// <summary>Fired when File > Close clears the current session, so the view can stop/unload preview playback.</summary>
+    public event Action? FileClosed;
 
     /// <summary>
     /// Fired when an operation fails. The view shows this instead of the exception taking down
@@ -112,6 +116,7 @@ public class MainViewModel : ObservableObject
         OpenFileCommand = new AsyncRelayCommand<string>(OpenFileAsync!);
         RedetectCommand = new AsyncRelayCommand(RedetectAsync, () => SourcePath != null);
         ExportCommand = new AsyncRelayCommand(ExportAsync, () => SourcePath != null && Candidates.Any(c => c.Approved));
+        CloseFileCommand = new AsyncRelayCommand(CloseFileAsync, () => SourcePath != null);
     }
 
     /// <summary>
@@ -178,6 +183,7 @@ public class MainViewModel : ObservableObject
                 await GenerateThumbnailsAsync();
                 RedetectCommand.NotifyCanExecuteChanged();
                 ExportCommand.NotifyCanExecuteChanged();
+                CloseFileCommand.NotifyCanExecuteChanged();
                 return;
             }
 
@@ -231,6 +237,7 @@ public class MainViewModel : ObservableObject
             await AutosaveAsync();
             RedetectCommand.NotifyCanExecuteChanged();
             ExportCommand.NotifyCanExecuteChanged();
+            CloseFileCommand.NotifyCanExecuteChanged();
             DetectionFinished?.Invoke(summary);
         }
         catch (Exception ex)
@@ -376,6 +383,42 @@ public class MainViewModel : ObservableObject
         {
             IsBusy = false;
         }
+    }
+
+    public async Task CloseFileAsync()
+    {
+        if (SourcePath == null) return;
+        if (IsBusy)
+        {
+            // Mid-detection/export, Candidates/SourcePath/ThumbnailDir are actively being written
+            // by a background task — closing out from under it would race. Just decline quietly;
+            // the menu item staying enabled during a busy operation is an acceptable rough edge
+            // since CanExecute only checks SourcePath, not IsBusy (which changes far more often).
+            StatusMessage = "Can't close while an operation is in progress.";
+            return;
+        }
+
+        Log.Info($"CloseFileAsync: closing '{SourcePath}'");
+        await AutosaveAsync(); // flush the latest state before clearing, so reopening resumes cleanly
+
+        SourcePath = null;
+        ThumbnailDir = null;
+        DurationSeconds = 0;
+        SourceHasAudio = true;
+        Thresholds = new DetectionThresholds();
+        Warnings.Clear();
+        VerificationResults.Clear();
+        Candidates.Clear();
+        CandidatesReset?.Invoke();
+        SelectedCandidate = null;
+        CurrentTimeSeconds = 0;
+        _suppressAutosave = false;
+        StatusMessage = "Open a source video to begin.";
+
+        RedetectCommand.NotifyCanExecuteChanged();
+        ExportCommand.NotifyCanExecuteChanged();
+        CloseFileCommand.NotifyCanExecuteChanged();
+        FileClosed?.Invoke();
     }
 
     public string FormatTimecode(double seconds)

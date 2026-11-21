@@ -30,6 +30,7 @@
             <Menu DockPanel.Dock="Top">
                 <MenuItem Header="_File">
                     <MenuItem Header="_Open Source Video..." Click="OpenButton_Click"/>
+                    <MenuItem Header="_Close" Command="{Binding CloseFileCommand}"/>
                     <Separator/>
                     <MenuItem Header="E_xit" Click="ExitMenuItem_Click"/>
                 </MenuItem>

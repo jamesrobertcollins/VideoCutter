@@ -20,6 +20,14 @@ mkv, avi, mov, ts, m2ts, wmv). VideoCutter will:
 If your source has no audio track, you'll get a warning that silence detection is being skipped
 for this file (black-frame and scene-change detection still run).
 
+**File > Close** clears the current review back to the empty "Open a source video to begin"
+state — handy before opening a different file without the previous one's data lingering on
+screen. It flushes one last autosave first, so reopening the same source later resumes exactly
+where you left off; it does **not** delete the project file (that's the separate opt-in cleanup
+checkbox in the export bar — see below). Disabled when no file is open, and declines (with a
+status-bar message) if clicked mid-detection/export rather than risk tearing state out from under
+a running operation.
+
 ## 2. Understanding the candidate list
 
 Every candidate cut point appears in the list on the left (or top, if you've switched layouts —

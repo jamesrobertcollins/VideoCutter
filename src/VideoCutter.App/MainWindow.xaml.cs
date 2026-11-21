@@ -69,6 +69,11 @@ public partial class MainWindow : Window
         });
         _vm.Faulted += message => Dispatcher.Invoke(() =>
             MessageBox.Show(message, "VideoCutter — Error", MessageBoxButton.OK, MessageBoxImage.Error));
+        _vm.FileClosed += () => Dispatcher.Invoke(() =>
+        {
+            try { _player?.Stop(); } // fully unload the current media (not just pause) so the preview goes blank
+            catch (Exception ex) { Log.Warn($"Error stopping preview on File > Close: {ex.Message}"); }
+        });
 
         // Scissors "snip" animation next to the progress bar while any operation is running —
         // a visual confirmation the app hasn't frozen, independent of the progress bar's percent.
