@@ -52,3 +52,6 @@ file groups changes by *topic* across commits for human readability, not 1:1 by 
 - Top-level menu bar (File/View/Help) was far more spread out than a normal Windows app — the
   custom MenuItem template's checkmark/gesture-text/submenu-arrow gutter columns (meant for
   submenu items) were also being reserved on top-level headers. Now zeroed for top-level items.
+- Every menu dropdown and ComboBox popup (Theme/Speed) showed an always-visible scrollbar even
+  with only a couple of items — `ScrollViewer`'s default `VerticalScrollBarVisibility` is
+  `Visible`, not `Auto`. Fixed in both custom templates (one fix covers every menu/submenu).
