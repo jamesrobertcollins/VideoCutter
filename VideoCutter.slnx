@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/VideoCutter.App/VideoCutter.App.csproj" />
+    <Project Path="src/VideoCutter.Core/VideoCutter.Core.csproj" />
+    <Project Path="src/VideoCutter.SmokeTest/VideoCutter.SmokeTest.csproj" />
+  </Folder>
+</Solution>

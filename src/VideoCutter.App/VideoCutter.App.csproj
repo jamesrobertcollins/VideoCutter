@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>VideoCutter</AssemblyName>
+    <RootNamespace>VideoCutter.App</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VideoCutter.Core\VideoCutter.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LibVLCSharp" Version="3.9.1" />
+    <PackageReference Include="LibVLCSharp.WPF" Version="3.9.1" />
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.21" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+  </ItemGroup>
+
+  <!--
+    Ensures bundled ffmpeg/ffprobe exist before build. On a fresh clone the very first build
+    will still skip the Content items below (MSBuild evaluates item Conditions before targets
+    run), so after cloning run tools/Get-Ffmpeg.ps1 once, or just build twice.
+  -->
+  <Target Name="FetchFfmpeg" BeforeTargets="BeforeBuild">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\tools\Get-Ffmpeg.ps1&quot;" />
+  </Target>
+
+  <ItemGroup>
+    <Content Include="..\..\tools\ffmpeg\ffmpeg.exe" Condition="Exists('..\..\tools\ffmpeg\ffmpeg.exe')">
+      <Link>ffmpeg\ffmpeg.exe</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\tools\ffmpeg\ffprobe.exe" Condition="Exists('..\..\tools\ffmpeg\ffprobe.exe')">
+      <Link>ffmpeg\ffprobe.exe</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>
