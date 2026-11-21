@@ -51,9 +51,12 @@ tied to any automatic feature/commit threshold.
 
 ## Releasing a Windows binary
 
+```powershell
+tools/Publish-Release.ps1
 ```
-tools/publish-release.sh
-```
+
+(PowerShell — the VS Code integrated terminal's default on Windows. A bash equivalent,
+`tools/publish-release.sh`, is also included for non-PowerShell shells.)
 
 This does the equivalent of:
 
