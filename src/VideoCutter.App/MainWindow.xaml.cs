@@ -1,8 +1,12 @@
-﻿using System.Windows;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 using LibVLCSharp.Shared;
 using Microsoft.Win32;
+using VideoCutter.App.Services;
 using VideoCutter.App.ViewModels;
 using VideoCutter.Core.Models;
 using VideoCutter.Core.Services;
@@ -19,6 +23,10 @@ public partial class MainWindow : Window
     private MediaPlayer? _player;
     private readonly DispatcherTimer _autosaveTimer = new() { Interval = TimeSpan.FromSeconds(5) };
     private bool _suppressScrubberSeek;
+    private bool _uiReady;
+    private readonly List<MenuItem> _themeMenuItems = new();
+
+    private static readonly double[] SpeedOptions = { 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 4.0 };
 
     public MainWindow()
     {
@@ -60,6 +68,9 @@ public partial class MainWindow : Window
         };
         _autosaveTimer.Start();
 
+        SourceInitialized += (_, _) => ThemeManager.ApplyTitlebarToWindow(this);
+        PreviewKeyDown += MainWindow_PreviewKeyDown;
+
         Closing += (_, _) =>
         {
             Log.Info("=== VideoCutter closing ===");
@@ -74,6 +85,129 @@ public partial class MainWindow : Window
                 Log.Error("Error during shutdown cleanup (non-fatal, app is closing anyway)", ex);
             }
         };
+
+        // Initial setup, done directly (not through the event handlers, which are guarded by
+        // _uiReady and would otherwise no-op or run against not-yet-valid named elements).
+        var savedTheme = ThemeManager.LoadPreference();
+        foreach (var kv in ThemeManager.Themes)
+        {
+            var mi = new MenuItem { Header = kv.Value.DisplayName, IsCheckable = true, Tag = kv.Key, IsChecked = kv.Key == savedTheme };
+            mi.Click += ThemeMenuItem_Click;
+            _themeMenuItems.Add(mi);
+            ThemeMenu.Items.Add(mi);
+        }
+        ThemeManager.Apply(savedTheme, null); // resources now; titlebar once SourceInitialized fires
+
+        foreach (var s in SpeedOptions)
+            SpeedCombo.Items.Add(new ComboBoxItem { Content = $"{s}x", Tag = s });
+        SpeedCombo.SelectedIndex = Array.IndexOf(SpeedOptions, 1.0);
+
+        ApplyReviewLayout(videoOnTop: false);
+
+        _uiReady = true;
+    }
+
+    private void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.OriginalSource is TextBox) return; // don't steal arrow keys from normal text editing
+        if (_player == null) return;
+
+        // Alt held down routes arrow keys through the "system key" path (menu-access convention).
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key != Key.Left && key != Key.Right) return;
+
+        double deltaSeconds = Keyboard.Modifiers.HasFlag(ModifierKeys.Control) ? 5.0
+            : Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) ? 10.0
+            : 1.0;
+        if (key == Key.Left) deltaSeconds = -deltaSeconds;
+
+        var newSeconds = Math.Max(0, Math.Min(_vm.DurationSeconds, _vm.CurrentTimeSeconds + deltaSeconds));
+        _player.Time = (long)(newSeconds * 1000);
+        _vm.CurrentTimeSeconds = newSeconds;
+        e.Handled = true;
+    }
+
+    private void ThemeMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_uiReady) return;
+        if (sender is not MenuItem clicked || clicked.Tag is not AppTheme theme) return;
+
+        // Manual radio behavior: checking one unchecks all the others.
+        foreach (var mi in _themeMenuItems) mi.IsChecked = ReferenceEquals(mi, clicked);
+        ThemeManager.Apply(theme, this);
+    }
+
+    private void SpeedCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_uiReady || _player == null) return;
+        if (SpeedCombo.SelectedItem is not ComboBoxItem item || item.Tag is not double speed) return;
+        try { _player.SetRate((float)speed); }
+        catch (Exception ex) { Log.Warn($"SetRate({speed}) failed: {ex.Message}"); }
+    }
+
+    private void LayoutMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_uiReady) return;
+        if (sender is not MenuItem clicked) return;
+
+        bool videoOnTop = ReferenceEquals(clicked, LayoutTopMenuItem);
+        LayoutRightMenuItem.IsChecked = !videoOnTop;
+        LayoutTopMenuItem.IsChecked = videoOnTop;
+        ApplyReviewLayout(videoOnTop);
+    }
+
+    /// <summary>
+    /// Rearranges the single ReviewGrid between "video on the right" (list 2*, video 3* — video
+    /// gets the bigger share) and "video on top, list below" without duplicating any XAML: the
+    /// same ListBox/GridSplitter/DockPanel instances just move to different cells.
+    /// </summary>
+    private void ApplyReviewLayout(bool videoOnTop)
+    {
+        if (videoOnTop)
+        {
+            ReviewCol0.Width = new GridLength(1, GridUnitType.Star);
+            ReviewCol1.Width = new GridLength(0);
+            ReviewCol2.Width = new GridLength(0);
+            ReviewRow0.Height = new GridLength(2, GridUnitType.Star);
+            ReviewRow1.Height = new GridLength(8);
+            ReviewRow2.Height = new GridLength(3, GridUnitType.Star);
+
+            Grid.SetRow(PreviewPanel, 0); Grid.SetColumn(PreviewPanel, 0);
+            Grid.SetRow(ReviewSplitter, 1); Grid.SetColumn(ReviewSplitter, 0);
+            Grid.SetRow(CandidateList, 2); Grid.SetColumn(CandidateList, 0);
+
+            ReviewSplitter.Width = double.NaN;
+            ReviewSplitter.Height = 8;
+            ReviewSplitter.HorizontalAlignment = HorizontalAlignment.Stretch;
+            ReviewSplitter.VerticalAlignment = VerticalAlignment.Center;
+            ReviewSplitter.ResizeDirection = GridResizeDirection.Rows;
+        }
+        else
+        {
+            // List gets 2 shares, video gets 3 — the video window is the bigger of the two.
+            ReviewCol0.Width = new GridLength(2, GridUnitType.Star);
+            ReviewCol1.Width = new GridLength(8);
+            ReviewCol2.Width = new GridLength(3, GridUnitType.Star);
+            ReviewRow0.Height = new GridLength(1, GridUnitType.Star);
+            ReviewRow1.Height = new GridLength(0);
+            ReviewRow2.Height = new GridLength(0);
+
+            Grid.SetRow(CandidateList, 0); Grid.SetColumn(CandidateList, 0);
+            Grid.SetRow(ReviewSplitter, 0); Grid.SetColumn(ReviewSplitter, 1);
+            Grid.SetRow(PreviewPanel, 0); Grid.SetColumn(PreviewPanel, 2);
+
+            ReviewSplitter.Width = 8;
+            ReviewSplitter.Height = double.NaN;
+            ReviewSplitter.HorizontalAlignment = HorizontalAlignment.Center;
+            ReviewSplitter.VerticalAlignment = VerticalAlignment.Stretch;
+            ReviewSplitter.ResizeDirection = GridResizeDirection.Columns;
+        }
+    }
+
+    private void AboutButton_Click(object sender, RoutedEventArgs e)
+    {
+        var about = new AboutWindow { Owner = this };
+        about.ShowDialog();
     }
 
     private void Player_TimeChanged(object? sender, MediaPlayerTimeChangedEventArgs e)

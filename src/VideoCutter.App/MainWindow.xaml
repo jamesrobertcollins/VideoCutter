@@ -6,14 +6,38 @@
         xmlns:ctrl="clr-namespace:VideoCutter.App.Controls"
         xmlns:models="clr-namespace:VideoCutter.Core.Models;assembly=VideoCutter.Core"
         xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
-        Title="VideoCutter" Height="820" Width="1280" MinWidth="900" MinHeight="600">
+        Title="VideoCutter" Height="820" Width="1280" MinWidth="900" MinHeight="600"
+        Icon="pack://application:,,,/Resources/app.ico"
+        Background="{DynamicResource AppWindowBackgroundBrush}"
+        Foreground="{DynamicResource AppForegroundBrush}"
+        FontFamily="{DynamicResource AppFontFamily}">
     <Window.Resources>
         <conv:TimecodeConverter x:Key="Timecode"/>
         <conv:PathToImageSourceConverter x:Key="ImageSourceConv"/>
         <conv:BoolToBrushConverter x:Key="BoolToBrush"/>
     </Window.Resources>
 
-    <Grid Margin="10">
+    <Grid>
+        <!-- Theme background image layer (Film theme only; Collapsed for every other theme). -->
+        <Rectangle Fill="{DynamicResource AppBackgroundImageBrush}" Visibility="{DynamicResource AppBackgroundImageVisibility}" IsHitTestVisible="False"/>
+
+        <DockPanel>
+            <Menu DockPanel.Dock="Top">
+                <MenuItem Header="_View">
+                    <MenuItem Header="_Layout">
+                        <MenuItem x:Name="LayoutRightMenuItem" Header="Video on Right" IsCheckable="True" IsChecked="True" Tag="Right" Click="LayoutMenuItem_Click"/>
+                        <MenuItem x:Name="LayoutTopMenuItem" Header="Video on Top" IsCheckable="True" Tag="Top" Click="LayoutMenuItem_Click"/>
+                    </MenuItem>
+                    <MenuItem x:Name="ThemeMenu" Header="_Theme"/>
+                    <Separator/>
+                    <MenuItem Header="View _Log" Click="ViewLog_Click"/>
+                </MenuItem>
+                <MenuItem Header="_Help">
+                    <MenuItem Header="_About VideoCutter" Click="AboutButton_Click"/>
+                </MenuItem>
+            </Menu>
+
+        <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -29,7 +53,6 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
             <Button x:Name="OpenButton" Content="Open Source Video..." Padding="10,4" Click="OpenButton_Click"/>
             <Button x:Name="RedetectButton" Content="Re-run Detection" Padding="10,4" Margin="8,0,0,0" Click="RedetectButton_Click"/>
-            <Button Content="View Log" Padding="10,4" Margin="8,0,0,0" Click="ViewLog_Click"/>
             <TextBlock Text="{Binding SourcePath, StringFormat='Source: {0}'}" VerticalAlignment="Center" Margin="16,0,0,0" FontWeight="Bold"/>
             <TextBlock Text="{Binding DurationSeconds, StringFormat='Duration: {0:F1}s'}" Margin="16,0,0,0" VerticalAlignment="Center"/>
         </StackPanel>
@@ -45,23 +68,29 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <!-- Candidate list + preview -->
-        <Grid Grid.Row="2">
+        <!-- Candidate list + preview: layout (columns vs rows) is rearranged in code by ApplyReviewLayout -->
+        <Grid x:Name="ReviewGrid" Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="3*"/>
-                <ColumnDefinition Width="8"/>
-                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition x:Name="ReviewCol0" Width="2*"/>
+                <ColumnDefinition x:Name="ReviewCol1" Width="8"/>
+                <ColumnDefinition x:Name="ReviewCol2" Width="3*"/>
             </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition x:Name="ReviewRow0" Height="*"/>
+                <RowDefinition x:Name="ReviewRow1" Height="0"/>
+                <RowDefinition x:Name="ReviewRow2" Height="0"/>
+            </Grid.RowDefinitions>
 
-            <ListBox x:Name="CandidateList" Grid.Column="0" ItemsSource="{Binding Candidates}"
+            <ListBox x:Name="CandidateList" Grid.Column="0" Grid.Row="0" ItemsSource="{Binding Candidates}"
+                     Background="{DynamicResource AppPanelBackgroundBrush}"
                      SelectedItem="{Binding SelectedCandidate}" ScrollViewer.VerticalScrollBarVisibility="Auto">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Border BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="4">
+                        <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1" Padding="4">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="170"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
@@ -70,7 +99,7 @@
                                 <CheckBox Grid.Column="0" IsChecked="{Binding Approved, Mode=TwoWay}" VerticalAlignment="Center"
                                           Margin="0,0,8,0" Checked="ApprovedCheck_Changed" Unchecked="ApprovedCheck_Changed"/>
 
-                                <Image Grid.Column="1" Width="72" Height="40" Stretch="UniformToFill"
+                                <Image Grid.Column="1" Width="160" Height="90" Stretch="UniformToFill"
                                        Source="{Binding ThumbnailPath, Converter={StaticResource ImageSourceConv}}"/>
 
                                 <StackPanel Grid.Column="2" Margin="8,0" VerticalAlignment="Center">
@@ -87,13 +116,15 @@
                 </ListBox.ItemTemplate>
             </ListBox>
 
-            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="#EEE"/>
+            <GridSplitter x:Name="ReviewSplitter" Grid.Column="1" Grid.Row="0" HorizontalAlignment="Stretch" Background="{DynamicResource AppBorderBrush}"/>
 
-            <DockPanel Grid.Column="2" LastChildFill="False">
+            <DockPanel x:Name="PreviewPanel" Grid.Column="2" Grid.Row="0" LastChildFill="False" Background="{DynamicResource AppPanelBackgroundBrush}">
                 <vlc:VideoView x:Name="VideoViewer" DockPanel.Dock="Top" Height="260" Background="Black"/>
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,8,0,0">
                     <Button Content="Play/Pause" Padding="8,4" Click="PlayPause_Click"/>
                     <Button Content="Stop" Padding="8,4" Margin="8,0,0,0" Click="StopPreview_Click"/>
+                    <TextBlock Text="Speed:" VerticalAlignment="Center" Margin="12,0,4,0"/>
+                    <ComboBox x:Name="SpeedCombo" Width="70" SelectionChanged="SpeedCombo_SelectionChanged"/>
                 </StackPanel>
                 <Slider x:Name="Scrubber" DockPanel.Dock="Top" Margin="0,8,0,0" Minimum="0"
                         Maximum="{Binding DurationSeconds}" ValueChanged="Scrubber_ValueChanged"
@@ -102,11 +133,13 @@
                     <TextBlock Text="{Binding CurrentTimeSeconds, Converter={StaticResource Timecode}}" FontWeight="Bold" VerticalAlignment="Center" Width="90"/>
                     <Button Content="Add Cut Here" Padding="8,4" Margin="8,0,0,0" Click="AddCutHere_Click"/>
                 </StackPanel>
+                <TextBlock DockPanel.Dock="Top" Margin="0,6,0,0" FontSize="11" Foreground="Gray" TextWrapping="Wrap"
+                           Text="Keyboard: ← / → seek 1s, Ctrl+← / → seek 5s, Alt+← / → seek 10s (while not typing in a text box)."/>
             </DockPanel>
         </Grid>
 
         <!-- Timeline -->
-        <Border Grid.Row="3" BorderBrush="#CCC" BorderThickness="1" Margin="0,8,0,0" Padding="4">
+        <Border Grid.Row="3" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Margin="0,8,0,0" Padding="4">
             <ctrl:TimelineControl x:Name="Timeline" DurationSeconds="{Binding DurationSeconds}" PlayheadSeconds="{Binding CurrentTimeSeconds}"/>
         </Border>
 
@@ -147,7 +180,6 @@
             <RadioButton Content="Re-encode (frame-accurate)" GroupName="mode" IsChecked="True" Checked="ReEncodeRadio_Checked" VerticalAlignment="Center"/>
             <RadioButton Content="Stream copy (fast, keyframe-snapped)" GroupName="mode" Margin="12,0,0,0" Checked="StreamCopyRadio_Checked" VerticalAlignment="Center"/>
             <Button Content="Export Approved Cuts" Padding="12,4" Margin="20,0,0,0" Click="ExportButton_Click"/>
-            <ProgressBar IsIndeterminate="{Binding IsBusy}" Width="150" Height="16" Margin="16,0,0,0" VerticalAlignment="Center"/>
         </StackPanel>
 
         <!-- Verification results -->
@@ -167,7 +199,13 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <!-- Status bar -->
-        <TextBlock Grid.Row="7" Text="{Binding StatusMessage}" Margin="0,8,0,0" FontStyle="Italic"/>
+        <!-- Status bar: message on the left, progress indicator pinned to the lower-right -->
+        <DockPanel Grid.Row="7" Margin="0,8,0,0">
+            <ProgressBar DockPanel.Dock="Right" IsIndeterminate="{Binding IsBusy}" Width="150" Height="16"
+                         Margin="16,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+            <TextBlock Text="{Binding StatusMessage}" FontStyle="Italic" VerticalAlignment="Center"/>
+        </DockPanel>
+        </Grid>
+        </DockPanel>
     </Grid>
 </Window>

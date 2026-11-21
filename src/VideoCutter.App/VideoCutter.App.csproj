@@ -8,7 +8,39 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>VideoCutter</AssemblyName>
     <RootNamespace>VideoCutter.App</RootNamespace>
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
+    <Authors>James Collins</Authors>
+    <Product>VideoCutter</Product>
+    <Copyright>Copyright (c) 2026 James Collins</Copyright>
   </PropertyGroup>
+
+  <!--
+    Dynamic version: Major.Minor come from Directory.Build.props (manual, Major changes only on
+    an explicit "major overhaul" instruction). The patch number is the live git commit count, so
+    it advances automatically on every commit with zero upkeep. Falls back to 0/"nogit" if git
+    or the repo isn't available (e.g. a zip-exported copy with no .git folder).
+  -->
+  <Target Name="ComputeGitVersion" BeforeTargets="BeforeBuild">
+    <Exec Command="git rev-list --count HEAD" ConsoleToMSBuild="true" StandardOutputImportance="low" ContinueOnError="true" WorkingDirectory="$(MSBuildThisFileDirectory)">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitCountRaw" />
+    </Exec>
+    <Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true" StandardOutputImportance="low" ContinueOnError="true" WorkingDirectory="$(MSBuildThisFileDirectory)">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitShaRaw" />
+    </Exec>
+    <PropertyGroup>
+      <GitCommitCount Condition="'$(GitCommitCountRaw)' != ''">$(GitCommitCountRaw)</GitCommitCount>
+      <GitCommitCount Condition="'$(GitCommitCount)' == ''">0</GitCommitCount>
+      <GitSha Condition="'$(GitShaRaw)' != ''">$(GitShaRaw)</GitSha>
+      <GitSha Condition="'$(GitSha)' == ''">nogit</GitSha>
+      <Version>$(VersionMajor).$(VersionMinor).$(GitCommitCount)</Version>
+      <AssemblyVersion>$(VersionMajor).$(VersionMinor).$(GitCommitCount).0</AssemblyVersion>
+      <FileVersion>$(VersionMajor).$(VersionMinor).$(GitCommitCount).0</FileVersion>
+      <!-- Not setting InformationalVersion explicitly: the SDK auto-appends "+<full-git-sha>"
+           to Version for it, which is more precise than our own short-sha suffix and avoids
+           ending up with both appended at once. -->
+    </PropertyGroup>
+    <Message Importance="high" Text="VideoCutter version: $(Version) ($(GitSha))" />
+  </Target>
 
   <ItemGroup>
     <ProjectReference Include="..\VideoCutter.Core\VideoCutter.Core.csproj" />
@@ -19,6 +51,12 @@
     <PackageReference Include="LibVLCSharp.WPF" Version="3.9.1" />
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.21" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\app.ico" />
+    <Resource Include="Resources\scissors.png" />
+    <Resource Include="Resources\filmstrip.jpg" />
   </ItemGroup>
 
   <!--

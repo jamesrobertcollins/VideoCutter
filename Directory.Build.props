@@ -1,0 +1,15 @@
+<Project>
+  <PropertyGroup>
+    <!--
+      Manual knobs:
+      - VersionMajor: bump ONLY on an explicit "major overhaul" instruction. Never auto-increment this.
+      - VersionMinor: bump for a deliberate feature-milestone call-out, if ever wanted. Otherwise leave it.
+
+      Everything else is computed automatically at build time in VideoCutter.App.csproj from the
+      live git commit count (and short SHA), so the patch number advances on every commit with no
+      manual upkeep and no drift between what's installed and what's in git.
+    -->
+    <VersionMajor>1</VersionMajor>
+    <VersionMinor>0</VersionMinor>
+  </PropertyGroup>
+</Project>

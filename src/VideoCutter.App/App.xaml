@@ -4,6 +4,131 @@
              xmlns:local="clr-namespace:VideoCutter.App"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <!-- Fallback (Light) values so DynamicResource lookups always resolve, even for an
+                 instant before ThemeManager.Apply runs its real override at startup. -->
+            <SolidColorBrush x:Key="AppWindowBackgroundBrush" Color="#F5F5F5"/>
+            <SolidColorBrush x:Key="AppPanelBackgroundBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="AppForegroundBrush" Color="#1A1A1A"/>
+            <SolidColorBrush x:Key="AppAccentBrush" Color="#2563EB"/>
+            <SolidColorBrush x:Key="AppBorderBrush" Color="#CCCCCC"/>
+            <SolidColorBrush x:Key="AppControlBackgroundBrush" Color="#FFFFFF"/>
+            <FontFamily x:Key="AppFontFamily">Segoe UI</FontFamily>
+            <ImageBrush x:Key="AppBackgroundImageBrush"/>
+            <Visibility x:Key="AppBackgroundImageVisibility">Collapsed</Visibility>
+
+            <!-- Implicit styles: every Button/TextBox/CheckBox/RadioButton/ComboBox in the app
+                 picks these up automatically, so a theme swap re-colors the whole UI without
+                 needing DynamicResource on every single control in every window. -->
+            <Style TargetType="Button">
+                <Setter Property="Background" Value="{DynamicResource AppControlBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+                <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+            </Style>
+            <Style TargetType="TextBox">
+                <Setter Property="Background" Value="{DynamicResource AppControlBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+                <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+            </Style>
+            <Style TargetType="CheckBox">
+                <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
+                <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+            </Style>
+            <Style TargetType="RadioButton">
+                <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
+                <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+            </Style>
+            <Style TargetType="ComboBox">
+                <Setter Property="Background" Value="{DynamicResource AppControlBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+                <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+                <Setter Property="Padding" Value="6,3"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ComboBox">
+                            <Grid>
+                                <ToggleButton x:Name="ToggleButton" Focusable="False" ClickMode="Press"
+                                              IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                    <ToggleButton.Template>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Border Background="{DynamicResource AppControlBackgroundBrush}"
+                                                    BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition/>
+                                                        <ColumnDefinition Width="18"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Path Grid.Column="1" Data="M0,0 L4,4 L8,0 Z" Fill="{DynamicResource AppForegroundBrush}"
+                                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </ToggleButton.Template>
+                                </ToggleButton>
+                                <ContentPresenter x:Name="ContentSite" IsHitTestVisible="False"
+                                                  Content="{TemplateBinding SelectionBoxItem}"
+                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                  Margin="{TemplateBinding Padding}" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                <Popup x:Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}"
+                                       AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                    <Border Background="{DynamicResource AppControlBackgroundBrush}"
+                                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
+                                            MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" MaxHeight="300">
+                                        <ScrollViewer SnapsToDevicePixels="True">
+                                            <ItemsPresenter/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style TargetType="ComboBoxItem">
+                <Setter Property="Background" Value="{DynamicResource AppControlBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
+                <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+                <Setter Property="Padding" Value="8,5"/>
+                <Style.Triggers>
+                    <Trigger Property="IsHighlighted" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource AppAccentBrush}"/>
+                        <Setter Property="Foreground" Value="White"/>
+                    </Trigger>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource AppAccentBrush}"/>
+                        <Setter Property="Foreground" Value="White"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            <Style TargetType="Menu">
+                <Setter Property="Background" Value="{DynamicResource AppPanelBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
+                <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+            </Style>
+            <Style TargetType="MenuItem">
+                <Setter Property="Background" Value="{DynamicResource AppPanelBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
+                <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+                <Style.Triggers>
+                    <Trigger Property="IsHighlighted" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource AppAccentBrush}"/>
+                        <Setter Property="Foreground" Value="White"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            <Style TargetType="Separator">
+                <Setter Property="Background" Value="{DynamicResource AppBorderBrush}"/>
+            </Style>
+            <Style TargetType="Expander">
+                <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
+                <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+            </Style>
+            <Style TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+            </Style>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>
