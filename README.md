@@ -88,6 +88,12 @@ sync with every change**, not be cleaned up later.
 
 See [`CHANGELOG.md`](CHANGELOG.md).
 
+## Downloads
+
+Prebuilt Windows binaries: [GitHub Releases](https://github.com/jamesrobertcollins/VideoCutter/releases)
+(self-contained, no .NET runtime install needed — unzip and run `VideoCutter.exe`). See
+`CONTRIBUTING.md`'s "Releasing a Windows binary" section for how these are built.
+
 ## Status
 
 Core detect/export/verify pipeline has been exercised end-to-end against synthetic test clips:

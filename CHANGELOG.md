@@ -10,6 +10,13 @@ file groups changes by *topic* across commits for human readability, not 1:1 by 
 
 - Nothing currently in flight.
 
+## v1.0.12 — 2026-11-21
+
+First published Windows binary release:
+[GitHub Releases](https://github.com/jamesrobertcollins/VideoCutter/releases/tag/v1.0.12) —
+self-contained win-x64 build (~260MB, includes the .NET runtime and bundled ffmpeg so no
+separate install is needed).
+
 ## 2026-11-20
 
 ### Added
