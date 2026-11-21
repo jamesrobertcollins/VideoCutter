@@ -21,36 +21,38 @@ public partial class AboutWindow : Window
         SourceInitialized += (_, _) => ThemeManager.ApplyTitlebarToWindow(this);
     }
 
-    private void ViewLicense_Click(object sender, RoutedEventArgs e)
+    private void ViewLicense_Click(object sender, RoutedEventArgs e) =>
+        OpenRepoFileOrFallback("LICENSE",
+            "This project is licensed under the MIT License. See the LICENSE file in the repository root.");
+
+    private void ViewThirdPartyNotices_Click(object sender, RoutedEventArgs e) =>
+        OpenRepoFileOrFallback("THIRD-PARTY-NOTICES.md",
+            "VideoCutter bundles ffmpeg (GPLv3) and libvlc/LibVLCSharp (LGPL v2.1). See " +
+            "THIRD-PARTY-NOTICES.md in the install/repository root for full details.");
+
+    private void OpenRepoFileOrFallback(string fileName, string fallbackMessage)
     {
         try
         {
-            // The LICENSE file ships at the repo root; find it relative to the build output
-            // by walking up from the app's base directory (works for `dotnet run` and a built exe).
+            // Ships copied right next to the exe (see VideoCutter.App.csproj Content items), so
+            // this is normally found immediately; the directory walk-up is a backstop for
+            // running straight out of bin/Debug in a dev checkout before a build has run.
             var dir = new DirectoryInfo(AppContext.BaseDirectory);
-            string? licensePath = null;
+            string? path = null;
             for (int i = 0; i < 8 && dir != null; i++, dir = dir.Parent)
             {
-                var candidate = Path.Combine(dir.FullName, "LICENSE");
-                if (File.Exists(candidate)) { licensePath = candidate; break; }
+                var candidate = Path.Combine(dir.FullName, fileName);
+                if (File.Exists(candidate)) { path = candidate; break; }
             }
 
-            if (licensePath != null)
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(licensePath) { UseShellExecute = true });
-            }
+            if (path != null)
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
             else
-            {
-                MessageBox.Show(
-                    "This project is licensed under the MIT License. See the LICENSE file in the repository root.",
-                    "VideoCutter — License", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
+                MessageBox.Show(fallbackMessage, "VideoCutter — License", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch
         {
-            MessageBox.Show(
-                "This project is licensed under the MIT License. See the LICENSE file in the repository root.",
-                "VideoCutter — License", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(fallbackMessage, "VideoCutter — License", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 

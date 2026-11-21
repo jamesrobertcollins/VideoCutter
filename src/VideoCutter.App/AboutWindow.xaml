@@ -38,7 +38,8 @@
                    Text="Built with .NET, WPF, LibVLCSharp, and ffmpeg. Film theme filmstrip artwork is AI-generated for this project."/>
 
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-            <Button Content="View License" Padding="10,4" Click="ViewLicense_Click"/>
+            <Button Content="Third-Party Licenses" Padding="10,4" Click="ViewThirdPartyNotices_Click"/>
+            <Button Content="View License" Padding="10,4" Margin="8,0,0,0" Click="ViewLicense_Click"/>
             <Button Content="Close" Padding="16,4" Margin="8,0,0,0" IsDefault="True" Click="Close_Click"/>
         </StackPanel>
     </Grid>

@@ -124,6 +124,16 @@ and bump `VersionMajor` **only** on an explicit "major overhaul" instruction. Th
 version visible in About / the exe's file properties always advances with every commit with zero
 upkeep (falls back to `0` if git/the repo isn't available, e.g. a zip export with no `.git`).
 
+## Licensing
+
+VideoCutter's own code is MIT-licensed (`LICENSE`). It bundles/depends on third-party components
+under their own licenses — **FFmpeg (GPLv3)** and **libvlc/LibVLCSharp (LGPL v2.1)** — invoked as
+a separate process (ffmpeg/ffprobe) or dynamically-linked native library (libvlc), never
+statically linked into VideoCutter.exe, so VideoCutter's own license is unaffected. Full details,
+exact versions, and redistribution obligations are in `THIRD-PARTY-NOTICES.md`; license texts are
+in `licenses/` and `tools/ffmpeg/LICENSE.txt`. The About box (Help > About VideoCutter) has a
+**Third-Party Licenses** button that opens this file directly.
+
 ## Project layout
 
 - `src/VideoCutter.Core` — detection/export/verification engine (no UI dependencies,
